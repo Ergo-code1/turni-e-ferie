@@ -353,7 +353,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 <details class="fold adm" id="arccard"><summary><span>Archivio anni</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Gli anni archiviati non vengono più scaricati all'apertura: l'app resta veloce. Si consultano lo stesso (si caricano quando li apri) e si possono riportare tra i dati attivi.</p><div id="arcl"></div></div></details>
 <details class="fold adm" id="fdtipidiri"><summary><span>Tipi di richiesta</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Decidi quali richieste si possono fare e da chi. "Giornata intera" = niente scelta delle ore.</p><div id="tps"></div></div></details>
 <details class="fold adm" id="fdnomiuten"><summary><span>Nomi utente</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Nome utente = prime 3 lettere del nome + prime 3 del cognome. Password iniziale <code>123</code>, da cambiare al primo accesso. Tu entri come <code>admin</code>.</p><div id="codes"></div><div class="row" style="margin-top:8px" id="fbsr"><button id="fbsb">Attiva accessi Firebase</button><span class="muted" id="fbsn"></span></div></div></details>
-<details class="fold adm" id="fdvw"><summary><span>Utenti in sola lettura</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Vedono tutti i reparti, turni, richieste e ore, ma non possono modificare nulla. Con la spunta Pianificatore possono gestire Turni e Impostazioni degli enti scelti.</p><div id="vws"></div><div class="row" style="margin-top:8px"><input id="vadd2" placeholder="Nome" style="flex:1;min-width:0"><button id="vaddb">Aggiungi utente</button></div></div></details>
+<details class="fold adm" id="fdvw"><summary><span>Utenti in sola lettura</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Vedono tutti i reparti, turni, richieste e ore, ma non possono modificare nulla. Con la spunta Pianificatore possono gestire Turni e Impostazioni degli enti scelti.</p><div id="vws"></div><div id="vacc" style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"></div><div class="row" style="margin-top:8px"><input id="vadd2" placeholder="Nome" style="flex:1;min-width:0"><button id="vaddb">Aggiungi utente</button></div></div></details>
 <details class="fold" id="fdtot"><summary><span>Totali per turno</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Scegli in quali reparti mostrare sotto la griglia le righe con quante persone ci sono in Mattina, Pomeriggio, Giornata e Notte.</p><div id="totlist"></div></div></details>
 <details class="fold adm pfest" id="fdfest"><summary><span>Giorni festivi</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Nei festivi tutti sono a riposo, salvo modifiche a mano.</p><div class="row"><input type="date" id="fnew" aria-label="Data festivo"><button id="fadd">Aggiungi</button></div><div id="flist" style="margin-top:8px"></div></div></details>
 <details class="fold adm" id="fdres"><summary><span>Dati di esempio</span></summary><div class="fb"><button id="reset">Ripristina dati di esempio</button></div></details>
@@ -425,7 +425,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.0.9",APP_REV_DATE="28/10/2026";
+const APP_REV="15.0.10",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -714,7 +714,20 @@ function fbListen(col,box,reps){const db=TFD.fb.db,offs=[],firsts=[];
   offs.push(off)}))});
  return {off:()=>offs.forEach(o=>o()),ready:Promise.all(firsts)}}
 let FBL={};
-async function fbStart(){const db=TFD.fb.db;TFD.who=await fbWho();
+// Accessi dei visualizzatori: 2 piccole scritture per apertura (una per scheda del browser), lette solo dall'admin a richiesta
+function trackViewer(){try{const w=TFD.who;if(!w||!w.vid)return;const k="tf-acc-"+todayIso+"-"+w.vid;try{if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,"1")}catch(e){}
+ const db=TFD.fb.db,FV=firebase.firestore.FieldValue,f="v"+w.vid;
+ db.doc("accessi/"+todayIso).set({[f]:FV.increment(1)},{merge:true}).catch(()=>{});
+ db.doc("accessi/ultimo").set({[f]:FV.serverTimestamp()},{merge:true}).catch(()=>{})}catch(e){}}
+async function loadAcc(){const el=$("vacc");if(!el)return;if(me||ro){el.innerHTML="";return}
+ if(!(TFD.kind==="firebase"&&TFD.fb)){el.innerHTML='<p class="muted">Gli accessi si registrano solo nella versione online.</p>';return}
+ el.innerHTML='<p class="muted">Carico gli accessi…</p>';
+ try{const db=TFD.fb.db,[a,b]=await Promise.all([db.doc("accessi/"+todayIso).get(),db.doc("accessi/ultimo").get()]),A=a.data()||{},B=b.data()||{};
+  const tot=S.viewers.reduce((n,v)=>n+(A["v"+v.id]||0),0);
+  el.innerHTML=`<div class="row" style="justify-content:space-between"><strong>Accessi di oggi: ${tot}</strong><button class="ghost" id="vaccr" aria-label="Aggiorna accessi">↻</button></div>`
+   +(S.viewers.length?S.viewers.map(v=>{const t=B["v"+v.id],d=t&&t.toDate?t.toDate():null;return `<div class="row" style="justify-content:space-between;padding:2px 0;font-size:13px"><span>${esc(v.name)}</span><span class="muted">ultimo: ${d?d.toLocaleString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"mai"} · oggi ${A["v"+v.id]||0}</span></div>`}).join(""):"");
+  $("vaccr").onclick=loadAcc}catch(e){el.innerHTML='<p class="muted">Accessi non leggibili ('+esc(e.code||e.message)+')</p>'}}
+async function fbStart(){const db=TFD.fb.db;TFD.who=await fbWho();trackViewer();
  if(!TFD.who){const e=new Error("utente non abilitato");e.code="permission-denied";throw e}
  const adm=TFD.who.user==="admin";
  const cfg=await db.doc("turniferie/config").get();
@@ -789,6 +802,7 @@ function totals(p,Y){
 let ro=false,repF=0,giroRep=0;
 let cur={y:new Date().getFullYear(),m:new Date().getMonth()},me=0,sel=[],tab="persone",hrs=8,tipo="F",vi=0;
 const $=id=>document.getElementById(id);
+document.getElementById("fdvw").addEventListener("toggle",()=>{if(document.getElementById("fdvw").open)loadAcc()});
 const iso=(y,m,d)=>`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 const D=s=>new Date(s+"T12:00");
 const add=(s,n)=>{const x=D(s);x.setDate(x.getDate()+n);return iso(x.getFullYear(),x.getMonth(),x.getDate())};
