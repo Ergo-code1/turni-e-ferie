@@ -279,6 +279,14 @@ tr.rep td{padding:10px 0 0!important;text-align:left}
 .pc input[type=number]{width:64px}
 .pc .rl input[type=text]{width:100px}
 .pc .rl select{width:auto;min-width:0}
+.fold{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;box-shadow:var(--shadow)}
+.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:14px 16px;font:700 15px Archivo,var(--sans);color:var(--fg)}
+.fold>summary::-webkit-details-marker{display:none}
+.fold>summary::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
+.fold[open]>summary::after{transform:rotate(-135deg)}
+.fold[open]>summary{border-bottom:1px solid var(--line)}
+.fold>.fb{padding:14px 16px;min-width:0}
+.ychips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 12px}
 .pc details{border-top:1px dashed var(--line);padding-top:8px}
 .pc details>summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--muted)}
 .pc details[open]>summary{margin-bottom:8px}
@@ -299,8 +307,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
   <button role="tab" data-t="persone" aria-selected="true"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.8 2.6 2.5 3 5.2"/></svg><span>Persone</span><span class="bdg" id="bdgp" hidden></span></button>
   <button role="tab" data-t="mese" aria-selected="false"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg><span>Anno</span></button>
   <button role="tab" data-t="ore" aria-selected="false"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg><span>Ore</span></button>
-  <button role="tab" data-t="ms" aria-selected="false" id="tabms" hidden><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Montastampi</span><span class="bdg" id="bdgms" hidden></span></button>
-  <button role="tab" data-t="rul" aria-selected="false" id="tabrul"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span>Regole</span></button>
+  <button role="tab" data-t="turni" aria-selected="false" id="tabturni"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2.5l3.5 3.5-3.5 3.5"/><path d="M3.5 11V9.5A3.5 3.5 0 0 1 7 6h13.5"/><path d="M7 21.5L3.5 18 7 14.5"/><path d="M20.5 13v1.5A3.5 3.5 0 0 1 17 18H3.5"/></svg><span>Turni</span><span class="bdg" id="bdgt" hidden></span></button>
   <button role="tab" data-t="imp" aria-selected="false" id="tabimp"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Impostazioni</span></button>
 </div>
 <div class="top"><div class="warn" id="arcban" hidden style="margin:0 0 8px"></div>
@@ -327,7 +334,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 </section>
 
 <section id="v-mese" hidden>
-  <div class="card"><h2 id="ytitle">Calendario dei prossimi 12 mesi</h2><p class="muted" style="margin-top:-6px">Persone previste per turno ogni giorno e chi è assente. Parte dal mese selezionato in alto.</p><div id="year"></div></div>
+  <div class="card"><h2 id="ytitle">Calendario dei prossimi 12 mesi</h2><div class="ychips" id="yreps"></div><p class="muted" style="margin-top:-6px">Persone previste per turno ogni giorno e chi è assente. Parte dal mese selezionato in alto.</p><div id="year"></div></div>
 </section>
 
 <section id="v-ore" hidden>
@@ -339,39 +346,21 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 </section>
 
 <section id="v-imp" hidden>
-  <div class="main">
-    <div class="card">
-      <h2>Giro turni</h2><p class="muted" id="impnote" hidden></p>
-      <label style="margin-bottom:10px">Reparto<select id="grep"></select></label>
-      <p class="muted" style="margin-top:-6px">Ogni persona fa una settimana dopo l'altra: S1, S2, S3… e dopo l'ultima ricomincia da S1. Ogni versione vale dalla data di inizio alla data di fine; senza data di fine vale da lì in poi. Se modifichi una versione già iniziata, la modifica parte da oggi e il passato resta com'era. Le modifiche valgono solo dopo "Rendi operativo".</p>
-      <div class="vbar" id="vbar" hidden><strong style="flex:1;min-width:160px">Modifiche al giro non ancora operative</strong><button id="vundo">Annulla modifiche</button><button class="pri" id="vapply">Rendi operativo</button></div>
-      <div class="vers" id="vers"></div>
-      <div class="row" style="margin-bottom:10px"><label>Valida dal<input type="date" id="vfrom"></label><label>Fino al<input type="date" id="vto"></label><button id="vtoclr" style="align-self:flex-end">Togli fine (in poi)</button><button id="vdel" style="align-self:flex-end">Elimina versione</button></div><label style="margin-bottom:10px">Tipo<select id="vtype"><option value="giro">Giro a settimane</option><option value="uni">Turno default: tutto il reparto fa sempre lo stesso turno</option><option value="auto">Automatica a regole</option></select></label><div id="uni"></div>
-      <div id="weeks"></div><button id="addwk" style="margin-top:8px">Aggiungi settimana</button>
-      <div class="gppl" id="gpplw"><strong>Chi segue questo giro</strong><p class="muted" style="margin:2px 0 8px" id="gpnote"></p><div id="gppl"></div></div>
-      <div class="req" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
-        <strong>Nuova versione del giro</strong>
-        <div class="row"><label>Inizia dal<input type="date" id="vnew"></label><label>Fino al<input type="date" id="vnewto"></label><button class="pri" id="vadd" style="align-self:flex-end">Crea copiando quella selezionata</button></div><span class="muted">Fino al vuoto = da quella data in poi. Con una data di fine, dopo torna a valere il giro precedente.</span>
-      </div>
-    </div>
-    <div class="col">
-
-      <div class="card adm"><h2>Reparti</h2><p class="muted" style="margin-top:-6px">Ogni persona vede solo il proprio reparto.</p><div id="reps"></div><div class="row" style="margin-top:8px"><input id="radd" placeholder="Nome reparto" style="flex:1;min-width:0"><button id="raddb">Aggiungi reparto</button></div></div>
-      <div class="card adm"><h2>Pagina Ore</h2><p class="muted" style="margin-top:-6px">Chi può vedere la pagina Ore, oltre all'amministratore. Ognuno vede i reparti a cui ha accesso.</p><div id="oresee"></div></div>
-<div class="card adm" id="arccard"><h2>Archivio anni</h2><p class="muted" style="margin-top:-6px">Gli anni archiviati non vengono più scaricati all'apertura: l'app resta veloce. Si consultano lo stesso (si caricano quando li apri) e si possono riportare tra i dati attivi.</p><div id="arcl"></div></div>
-<div class="card adm"><h2>Tipi di richiesta</h2><p class="muted" style="margin-top:-6px">Decidi quali richieste si possono fare e da chi. "Giornata intera" = niente scelta delle ore.</p><div id="tps"></div></div>
-<div class="card adm"><h2>Nomi utente</h2><p class="muted" style="margin-top:-6px">Nome utente = prime 3 lettere del nome + prime 3 del cognome. Password iniziale <code>123</code>, da cambiare al primo accesso. Tu entri come <code>admin</code>.</p><div id="codes"></div><div class="row" style="margin-top:8px" id="fbsr"><button id="fbsb">Attiva accessi Firebase</button><span class="muted" id="fbsn"></span></div></div>
-<div class="card adm"><h2>Utenti in sola lettura</h2><p class="muted" style="margin-top:-6px">Vedono tutti i reparti, turni, richieste e ore, ma non possono modificare nulla.</p><div id="vws"></div><div class="row" style="margin-top:8px"><input id="vadd2" placeholder="Nome" style="flex:1;min-width:0"><button id="vaddb">Aggiungi utente</button></div></div>
-      <div class="card"><h2>Totali per turno</h2><p class="muted" style="margin-top:-6px">Scegli in quali reparti mostrare sotto la griglia le righe con quante persone ci sono in Mattina, Pomeriggio, Giornata e Notte.</p><div id="totlist"></div></div>
-      <div class="card adm"><h2>Giorni festivi</h2><p class="muted" style="margin-top:-6px">Nei festivi tutti sono a riposo, salvo modifiche a mano.</p><div class="row"><input type="date" id="fnew" aria-label="Data festivo"><button id="fadd">Aggiungi</button></div><div id="flist" style="margin-top:8px"></div></div>
-      <div class="card adm"><button id="reset">Ripristina dati di esempio</button></div>
-    </div>
-  </div>
-<div class="card" style="margin-top:16px"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">Persone</h2><div class="row"><input id="pfind" placeholder="Cerca nome" aria-label="Cerca persona" style="width:160px"><select id="pfrep" aria-label="Filtra reparto"></select></div></div><p class="muted" style="margin:0 0 12px">Livello: chi approva le richieste e riceve gli avvisi è il livello subito sopra, nei reparti in comune. "Responsabile anche di": altri reparti che segue. "Può vedere": quali reparti consulta. Direttore e Dirigenza possono non avere reparto né piano turni. Ogni nuova persona riceve subito l'accesso con password 123 e al primo accesso deve sceglierne una sua.</p><div id="ppl"></div></div>
+<p class="muted" id="impnote" hidden></p>
+<details class="fold adm" id="fdrep"><summary><span>Reparti</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Ogni persona vede solo il proprio reparto.</p><div id="reps"></div><div class="row" style="margin-top:8px"><input id="radd" placeholder="Nome reparto" style="flex:1;min-width:0"><button id="raddb">Aggiungi reparto</button></div></div></details>
+<details class="fold" id="fdpers"><summary><span>Persone</span></summary><div class="fb"><div class="row" style="justify-content:flex-end;margin-bottom:6px"><div class="row"><input id="pfind" placeholder="Cerca nome" aria-label="Cerca persona" style="width:160px"><select id="pfrep" aria-label="Filtra ente"></select><select id="pflv" aria-label="Filtra livello"></select></div></div><p class="muted" style="margin:0 0 12px">Livello: chi approva le richieste e riceve gli avvisi è il livello subito sopra, nei reparti in comune. "Responsabile anche di": altri reparti che segue. "Può vedere": quali reparti consulta. Direttore e Dirigenza possono non avere reparto né piano turni. Ogni nuova persona riceve subito l'accesso con password 123 e al primo accesso deve sceglierne una sua.</p><div id="ppl"></div></div></details>
+<details class="fold adm" id="fdpaginaor"><summary><span>Pagina Ore</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Chi può vedere la pagina Ore, oltre all'amministratore. Ognuno vede i reparti a cui ha accesso.</p><div id="oresee"></div></div></details>
+<details class="fold adm" id="arccard"><summary><span>Archivio anni</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Gli anni archiviati non vengono più scaricati all'apertura: l'app resta veloce. Si consultano lo stesso (si caricano quando li apri) e si possono riportare tra i dati attivi.</p><div id="arcl"></div></div></details>
+<details class="fold adm" id="fdtipidiri"><summary><span>Tipi di richiesta</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Decidi quali richieste si possono fare e da chi. "Giornata intera" = niente scelta delle ore.</p><div id="tps"></div></div></details>
+<details class="fold adm" id="fdnomiuten"><summary><span>Nomi utente</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Nome utente = prime 3 lettere del nome + prime 3 del cognome. Password iniziale <code>123</code>, da cambiare al primo accesso. Tu entri come <code>admin</code>.</p><div id="codes"></div><div class="row" style="margin-top:8px" id="fbsr"><button id="fbsb">Attiva accessi Firebase</button><span class="muted" id="fbsn"></span></div></div></details>
+<details class="fold adm" id="fdvw"><summary><span>Utenti in sola lettura</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Vedono tutti i reparti, turni, richieste e ore, ma non possono modificare nulla. Con la spunta Pianificatore possono gestire Turni e Impostazioni degli enti scelti.</p><div id="vws"></div><div class="row" style="margin-top:8px"><input id="vadd2" placeholder="Nome" style="flex:1;min-width:0"><button id="vaddb">Aggiungi utente</button></div></div></details>
+<details class="fold" id="fdtot"><summary><span>Totali per turno</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Scegli in quali reparti mostrare sotto la griglia le righe con quante persone ci sono in Mattina, Pomeriggio, Giornata e Notte.</p><div id="totlist"></div></div></details>
+<details class="fold adm" id="fdfest"><summary><span>Giorni festivi</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Nei festivi tutti sono a riposo, salvo modifiche a mano.</p><div class="row"><input type="date" id="fnew" aria-label="Data festivo"><button id="fadd">Aggiungi</button></div><div id="flist" style="margin-top:8px"></div></div></details>
+<details class="fold adm" id="fdres"><summary><span>Dati di esempio</span></summary><div class="fb"><button id="reset">Ripristina dati di esempio</button></div></details>
 </section>
 
-<section id="v-ms" hidden>
-  <div class="card">
+<section id="v-turni" hidden>
+<details class="fold" id="acms"><summary><span>Montastampi</span><span class="bdg" id="bdgms" hidden></span></summary><div class="fb"><div id="v-ms">
     <div class="mtool">
       <div class="mnav"><button id="msprev" aria-label="Mese precedente">‹</button><strong id="msmlabel" style="min-width:150px;text-align:center;text-transform:capitalize"></strong><button id="msnext" aria-label="Mese successivo">›</button></div>
       <button class="pri" id="msplan" title="Mantiene gli input manuali e completa solo le coperture minime previste dalle regole">Pianificazione automatica</button>
@@ -397,18 +386,29 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
       <div class="scroll"><table class="ore" id="mstot"></table></div>
       <div class="legend" id="msleg"></div>
     </div>
-  </div>
-</section>
-
-<section id="v-rul" hidden>
-  <div class="card">
+  </div></div></details>
+<details class="fold" id="acrul"><summary><span>Regole</span></summary><div class="fb"><div id="v-rul">
     <div class="row" style="justify-content:space-between;margin-bottom:14px">
       <div class="vers" style="margin:0" id="rultabs"><button data-rt="g" aria-pressed="true">Globali</button><button data-rt="i" aria-pressed="false">Individuali</button></div>
       <div class="row" id="rulsave"></div>
     </div>
     <div id="rulbody"></div>
-  </div>
+  </div></div></details>
+<details class="fold" id="acgiro"><summary><span>Giro turni</span></summary><div class="fb">
+      <label style="margin-bottom:10px">Reparto<select id="grep"></select></label>
+      <p class="muted" style="margin-top:-6px">Ogni persona fa una settimana dopo l'altra: S1, S2, S3… e dopo l'ultima ricomincia da S1. Ogni versione vale dalla data di inizio alla data di fine; senza data di fine vale da lì in poi. Se modifichi una versione già iniziata, la modifica parte da oggi e il passato resta com'era. Le modifiche valgono solo dopo "Rendi operativo".</p>
+      <div class="vbar" id="vbar" hidden><strong style="flex:1;min-width:160px">Modifiche al giro non ancora operative</strong><button id="vundo">Annulla modifiche</button><button class="pri" id="vapply">Rendi operativo</button></div>
+      <div class="vers" id="vers"></div>
+      <div class="row" style="margin-bottom:10px"><label>Valida dal<input type="date" id="vfrom"></label><label>Fino al<input type="date" id="vto"></label><button id="vtoclr" style="align-self:flex-end">Togli fine (in poi)</button><button id="vdel" style="align-self:flex-end">Elimina versione</button></div><label style="margin-bottom:10px">Tipo<select id="vtype"><option value="giro">Giro a settimane</option><option value="uni">Turno default: tutto il reparto fa sempre lo stesso turno</option><option value="auto">Automatica a regole</option></select></label><div id="uni"></div>
+      <div id="weeks"></div><button id="addwk" style="margin-top:8px">Aggiungi settimana</button>
+      <div class="gppl" id="gpplw"><strong>Chi segue questo giro</strong><p class="muted" style="margin:2px 0 8px" id="gpnote"></p><div id="gppl"></div></div>
+      <div class="req" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+        <strong>Nuova versione del giro</strong>
+        <div class="row"><label>Inizia dal<input type="date" id="vnew"></label><label>Fino al<input type="date" id="vnewto"></label><button class="pri" id="vadd" style="align-self:flex-end">Crea copiando quella selezionata</button></div><span class="muted">Fino al vuoto = da quella data in poi. Con una data di fine, dopo torna a valere il giro precedente.</span>
+      </div>
+    </div></details>
 </section>
+
 
 <div id="lgc"><div class="box"><strong>Turni e Ferie · Ergotech</strong><span class="muted">Caricamento dei dati…</span></div></div>
 <div class="ovl" id="msovl" hidden><div class="box" id="msbox" role="dialog" aria-modal="true"></div></div>
@@ -424,8 +424,9 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // Configurazione Firebase (Console Firebase > Impostazioni progetto > App Web > Configurazione SDK).
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
-// Revisione dell'app: aumentare APP_REV a ogni pubblicazione e aggiornare version.json con lo stesso numero
-const APP_REV=15,APP_REV_DATE="27/10/2026";
+// Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
+const APP_REV="15.0.1",APP_REV_DATE="27/10/2026";
+const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
 const TXT={L:"104"};
@@ -607,7 +608,7 @@ function applyLogin(k){LOGGED=k;sel=[];SCRT=true;cur.y=new Date().getFullYear();
  if(k==="a"){me=0;ro=false}else if(k[0]==="p"){me=+k.slice(1);ro=false}else{me=0;ro=+k.slice(1)}
  const adm=k==="a";$("whol").hidden=!adm;$("whoname").hidden=adm;
  $("whoname").textContent=adm?"":(k[0]==="p"?person(me).name:(S.viewers.find(v=>v.id===ro)||{}).name||"");
- if((ro||(me&&lvl(person(me))<2))&&tab==="imp")tab="persone";
+ if(!canSet()&&(tab==="imp"||tab==="turni"))tab="persone";
  $("lgc").hidden=true;fillWho();render();
  if(me&&person(me).acc&&person(me).acc.must&&!person(me).acc.nopw)pwSheet()}
 function doLogout(){try{localStorage.removeItem("tf-login")}catch(e){}if(FBM&&TFD.fb){TFD.fb.auth.signOut().finally(()=>location.reload());return}LOGGED=null;me=0;ro=false;closeSheet();showLogin()}
@@ -783,7 +784,7 @@ const add=(s,n)=>{const x=D(s);x.setDate(x.getDate()+n);return iso(x.getFullYear
 const monday=s=>{const x=D(s);return add(s,-((x.getDay()+6)%7))};
 const verOf=(vs,day)=>{const o=[...vs].sort((a,b)=>a.from<b.from?-1:1);return o.filter(v=>v.from<=day&&(!v.to||day<=v.to)).pop()||o.filter(v=>v.from<=day&&!v.to).pop()||o[0]};
 const oo=(v,p)=>(v.off&&v.off[p.id]!=null)?v.off[p.id]:p.off;
-const myR=()=>me?segue(person(me)):S.reparti.map(r=>r.id);
+const myR=()=>planOnly()?planR():me?[...new Set([...segue(person(me)),...(planR()||[])])]:S.reparti.map(r=>r.id);
 const RP=()=>S.reparti.filter(r=>myR().includes(r.id));
 const versOf=p=>!p.rep?S.versions:(S.reparti.find(r=>r.id===p.rep)||{}).versions||S.versions;
 const DOWN=["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"];
@@ -828,6 +829,12 @@ const lvl=p=>p&&p.lvl||1,lvName=p=>S.levels[lvl(p)-1]||"Livello "+lvl(p);
 const segue=p=>[...new Set([p.rep,...(p.reps||[])])].filter(Boolean);
 const inGrid=p=>p.prof!=="none"&&!!p.rep;
 const seeOf=p=>p.see||segue(p);
+const vwr=()=>ro?S.viewers.find(v=>v.id===ro):null;
+const pianOf=x=>{if(!x||!x.pian)return null;const a=(x.pianR&&x.pianR.length?x.pianR:[x.rep]).filter(id=>id&&S.reparti.some(r=>r.id===id));return a.length?a:null};
+const planR=()=>me?pianOf(person(me)):pianOf(vwr());
+const planOnly=()=>!!planR()&&(!!ro||lvl(person(me))<2);
+const canSet=()=>(!ro&&(!me||lvl(person(me))>=2))||!!planR();
+let yrSel=null;
 // chi approva: il primo livello sopra, nei reparti in comune; se manca sale al successivo
 function approvers(q){const c=S.people.filter(x=>x.id!==q.id&&lvl(x)>lvl(q)&&segue(x).some(r=>segue(q).includes(r)));if(!c.length)return[];const mn=Math.min(...c.map(lvl));return c.filter(x=>lvl(x)===mn)}
 const isAppr=(pid)=>!ro&&(!me||approvers(person(pid)).some(x=>x.id===me));
@@ -886,8 +893,8 @@ function sendReq(){
 function fillWho(){
   const cv=ro?"v"+ro:me?"p"+me:"a";
   $("who").innerHTML='<option value="a">Amministratore (tu)</option>'
-   +(S.viewers.length?`<optgroup label="Sola lettura">${S.viewers.map(v=>`<option value="v${v.id}">${v.name}</option>`).join("")}</optgroup>`:"")
-   +S.reparti.map(r=>`<optgroup label="${r.name}">${S.people.filter(p=>p.rep===r.id).sort((a,b)=>lvl(b)-lvl(a)).map(p=>`<option value="p${p.id}">${p.name}${lvl(p)>1?" · "+lvName(p):""}</option>`).join("")}</optgroup>`).join("");
+   +(S.viewers.length?`<optgroup label="Sola lettura">${S.viewers.map(v=>`<option value="v${v.id}">${v.name}${v.pian?" · pianificatore":""}</option>`).join("")}</optgroup>`:"")
+   +S.reparti.map(r=>`<optgroup label="${r.name}">${S.people.filter(p=>p.rep===r.id).sort((a,b)=>lvl(b)-lvl(a)).map(p=>`<option value="p${p.id}">${p.name}${lvl(p)>1?" · "+lvName(p):""}${p.pian?" · pianificatore":""}</option>`).join("")}</optgroup>`).join("");
   {const nr=S.people.filter(p=>!S.reparti.some(r=>r.id===p.rep));if(nr.length)$("who").insertAdjacentHTML("beforeend",`<optgroup label="Senza reparto">${nr.map(p=>`<option value="p${p.id}">${p.name} · ${lvName(p)}</option>`).join("")}</optgroup>`)}
   $("who").value=cv;if($("who").value!==cv){me=0;ro=false;$("who").value="a"}
   $("repf").innerHTML='<option value="0">Tutti</option>'+S.reparti.map(r=>`<option value="${r.id}">${r.name}</option>`).join("");
@@ -910,7 +917,7 @@ $("accb").onclick=()=>{const u=TFD.fb&&TFD.fb.auth.currentUser;if(!u)return;cons
  ap();$("themeb").onclick=()=>{th=nx[th];try{localStorage.setItem("tf-theme",th)}catch(e){}ap()}}
 fillWho();
 function confirm2(b,fn){if(b.dataset.c){fn()}else{b.dataset.c=1;const t=b.textContent;b.textContent="Conferma?";setTimeout(()=>{if(b.isConnected){delete b.dataset.c;b.textContent=t}},3000)}}
-$("who").onchange=e=>{const v=e.target.value;me=v[0]==="p"?+v.slice(1):0;ro=v[0]==="v"?+v.slice(1):false;sel=[];if((ro||(me&&lvl(person(me))<2))&&tab==="imp")tab="persone";closeSheet();render()};
+$("who").onchange=e=>{const v=e.target.value;me=v[0]==="p"?+v.slice(1):0;ro=v[0]==="v"?+v.slice(1):false;sel=[];if(!canSet()&&(tab==="imp"||tab==="turni"))tab="persone";closeSheet();render()};
 $("prev").onclick=()=>{cur.m--;if(cur.m<0){cur.m=11;cur.y--}if(!me)closeSheet();render()};
 $("next").onclick=()=>{cur.m++;if(cur.m>11){cur.m=0;cur.y++}if(!me)closeSheet();render()};
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;closeSheet();render()});
@@ -1074,17 +1081,17 @@ async function doUpdate(rv){try{localStorage.setItem(KEY,JSON.stringify(S))}catc
  $("updgo").disabled=true;$("updgo").textContent="Aggiornamento…";
  try{if(swReg){await swReg.update();const w=swReg.waiting||swReg.installing;if(w){if(w.state==="installed")w.postMessage("skipWaiting");else w.addEventListener("statechange",()=>{if(w.state==="installed")w.postMessage("skipWaiting")});setTimeout(()=>location.replace(location.pathname+"?v="+rv),4000);return}}}catch(e){}
  location.replace(location.pathname+"?v="+rv)}
-async function checkUpdate(){if(!/^https?:$/.test(location.protocol))return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json(),rv=+j.rev||0;
- if(rv>APP_REV&&rv!==updSkip){$("updtxt").textContent="Rev. "+rv+(j.date?" del "+j.date:"")+(j.note?" · "+j.note:"")+" (tu hai la Rev. "+APP_REV+")";$("upd").hidden=false;
+async function checkUpdate(){if(!/^https?:$/.test(location.protocol))return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json(),rv=String(j.ver||j.rev||0);
+ if(vcmp(rv,APP_REV)>0&&rv!==updSkip){$("updtxt").textContent="Rev. "+rv+(j.date?" del "+j.date:"")+(j.note?" · "+j.note:"")+" (tu hai la Rev. "+APP_REV+")";$("upd").hidden=false;
   $("updgo").onclick=()=>doUpdate(rv);$("updno").onclick=()=>{updSkip=rv;$("upd").hidden=true}}}catch(e){}}
 checkUpdate();setInterval(checkUpdate,15*60*1000);document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkUpdate()});
 let SCRT=true;
 function scrollToday(){const th=$("tdh"),sc=$("grid")&&$("grid").parentElement;if(!th||!sc||tab!=="persone")return false;const nm=$("grid").querySelector("th.name");sc.scrollLeft=Math.max(0,th.offsetLeft-(nm?nm.offsetWidth:0)-4);return true}
 function render(){syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOGGED)setTimeout(()=>{if(SCRT&&scrollToday())SCRT=false},0);{const ys=arcYearsNeeded(),b=$("arcban");if(b){const ay=(tab==="ore"?oy:cur.y);b.hidden=!isArc(ay);b.textContent=isArc(ay)?(ARC[ay]?"📦 Anno "+ay+" archiviato":"📦 Anno "+ay+" archiviato · caricamento…"):""}ys.forEach(y=>{if(!ARC[y])ensureYear(y)})}
   const{y,m}=cur,n=new Date(y,m+1,0).getDate();
-  $("tabimp").hidden=!!ro||(!!me&&lvl(person(me))<2);document.querySelector('.tabs button[data-t="ore"]').hidden=!oreOk();$("repl").hidden=!!me;$("expb").hidden=!canExp();
+  $("tabimp").hidden=$("tabturni").hidden=!canSet();document.querySelector('.tabs button[data-t="ore"]').hidden=!oreOk();$("repl").hidden=!!me;$("expb").hidden=!canExp();
   document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===tab));
-  ["persone","mese","ore","imp"].forEach(t=>$("v-"+t).hidden=t!==tab);
+  ["persone","mese","ore","imp","turni"].forEach(t=>$("v-"+t).hidden=t!==tab);
   $("mlabel").textContent=new Date(y,m,1).toLocaleDateString("it-IT",{month:"long",year:"numeric"});
   $("gtitle").textContent=me?`${lvName(person(me))}${inGrid(person(me))?" · tocca i giorni sulla tua riga per chiedere ferie o permessi":" · senza piano turni"}${approvers(person(me)).length?"":""}${S.people.some(q=>q.id!==me&&isAppr(q.id))?"; tocca la riga di chi gestisci per cambiargli il turno":""}`:ro?"Sola lettura: puoi vedere tutto ma non modificare":"Tocca le celle per la modifica manuale";
 
@@ -1153,13 +1160,19 @@ function render(){syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOG
   }
   if(tab==="mese"){
     const today=todayIso;let out="";const P0=me?person(me):null;
+    const YR=repsOf(vis()).filter(r=>r.id!==-1);if(yrSel)yrSel=yrSel.filter(id=>YR.some(r=>r.id===id));if(yrSel&&!yrSel.length)yrSel=null;
+    const yOn=id=>!yrSel||yrSel.includes(id);
+    $("yreps").innerHTML=YR.length>1?`<span class="cl muted" style="font-size:12px;font-weight:600">Enti da mostrare</span>${YR.map(r=>`<label class="chip"><input type="checkbox" id="yr${r.id}" data-yr="${r.id}"${yOn(r.id)?" checked":""}>${esc(r.name)}</label>`).join("")}${yrSel?'<button class="ghost" id="yrall">Tutti</button>':""}`:"";
+    $("yreps").querySelectorAll("[data-yr]").forEach(c=>c.onchange=()=>{const id=+c.dataset.yr;let a=yrSel?[...yrSel]:YR.map(r=>r.id);a=a.filter(x=>x!==id);if(c.checked)a.push(id);if(!a.length){c.checked=true;return toast("Lascia almeno un ente selezionato")}yrSel=a.length===YR.length?null:a;render()});
+    if($("yrall"))$("yrall").onclick=()=>{yrSel=null;render()};
+    const YV=vis().filter(p=>yOn(p.rep));
     for(let k=0;k<12;k++){
       const yy=y+Math.floor((m+k)/12),mm=(m+k)%12,nn=new Date(yy,mm+1,0).getDate();
       let c="LMMGVSD".split("").map(x=>`<div class="h">${x}</div>`).join("");
       c+="<div></div>".repeat((new Date(yy,mm,1).getDay()+6)%7);
       for(let d=1;d<=nn;d++){
         const day=iso(yy,mm,d),cnt={M:0,P:0,G:0,SV:0,N:0},away=[];
-        for(const p of vis()){
+        for(const p of YV){
           const c0=cellOf(p,day),nm=p.name.split(" ")[0];
           if(absent(p,day))away.push([nm+" "+(c0.txt==="·"?"":c0.txt),c0.cls.replace("c ","").split(" ")[0]]);
           else{if(cnt[c0.s]!==undefined)cnt[c0.s]++;if(c0.r)away.push([nm+" "+c0.txt+(c0.r.st==="wait"?"?":""),"Q"])}
@@ -1202,8 +1215,8 @@ function render(){syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOG
     $("onote").textContent="Residuo = monte ferie dell'anno meno ferie e permessi approvati. Questa pagina la vede solo chi è indicato in Impostazioni → Pagina Ore.";
   }
 
-  if(tab==="imp"){
-    document.querySelectorAll(".adm").forEach(e=>e.hidden=!!me);$("impnote").hidden=!me;$("impnote").textContent=me?"Puoi modificare giro, turno default e persone solo dei reparti che segui: "+RP().map(r=>r.name).join(", ")+".":"";
+  if(tab==="imp"||tab==="turni"){
+    document.querySelectorAll(".adm").forEach(e=>e.hidden=!!me||!!ro);$("impnote").hidden=!(me||ro);$("impnote").textContent=(me||ro)?(planR()?"Pianificatore · ":"")+"Puoi modificare giro, turno default, regole e persone solo di: "+RP().map(r=>r.name).join(", ")+".":"";
     if(!RP().some(r=>r.id===giroRep))giroRep=(RP()[0]||{}).id;
     const GR=S.reparti.find(r=>r.id===giroRep);
     $("grep").innerHTML=RP().map(r=>`<option value="${r.id}">${r.name}${S.drafts[r.id]&&JSON.stringify(S.drafts[r.id])!==JSON.stringify(r.versions)?" (modifiche in bozza)":""}</option>`).join("");$("grep").value=String(giroRep);
@@ -1252,18 +1265,19 @@ function render(){syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOG
      $("gppl").querySelectorAll("[data-go]").forEach(sl=>sl.onchange=()=>{const V=edV();if(!V)return;V.off=V.off||{};V.off[+sl.dataset.go]=(((+sl.value-wk0)%W)+W)%W;save();toast("Modifica in bozza: premi Rendi operativo");render()});}
     const maxW=Math.max(...S.reparti.flatMap(r=>r.versions.map(x=>(x.weeks||[]).length)),...DV.map(x=>(x.weeks||[]).length));
     const pq=(window._pq||"").toLowerCase(),pr=window._pr||0;
-    $("pfrep").innerHTML=`<option value="0">Tutti i reparti</option>${RP().map(r=>`<option value="${r.id}">${r.name}</option>`).join("")}${me?"":'<option value="-1">Senza reparto</option>'}`;$("pfrep").value=String(pr);
+    $("pfrep").innerHTML=`<option value="0">Tutti gli enti</option>${RP().map(r=>`<option value="${r.id}">${r.name}</option>`).join("")}${me?"":'<option value="-1">Senza reparto</option>'}`;$("pfrep").value=String(pr);
     $("pfind").value=window._pq||"";
-    const PL=S.people.filter(p=>(!me||(p.id!==me&&lvl(p)<lvl(person(me))&&myR().includes(p.rep)))&&(!pq||p.name.toLowerCase().includes(pq))&&(!pr||(pr===-1?!p.rep:segue(p).includes(pr)))).sort((a,b)=>(a.rep||0)-(b.rep||0)||S.people.indexOf(a)-S.people.indexOf(b));
+    const lf=window._pl||0;const PL=S.people.filter(p=>(!lf||lvl(p)===lf)&&(planOnly()?p.id!==me&&planR().includes(p.rep):!me||(p.id!==me&&lvl(p)<lvl(person(me))&&myR().includes(p.rep)))&&(!pq||p.name.toLowerCase().includes(pq))&&(!pr||(pr===-1?!p.rep:segue(p).includes(pr)))).sort((a,b)=>(a.rep||0)-(b.rep||0)||S.people.indexOf(a)-S.people.indexOf(b));
     const ini=n=>n.trim().split(/\s+/).map(x=>x[0]).slice(0,2).join("").toUpperCase();
     $("ppl").innerHTML=`<div class="pgrid">${PL.map(p=>{const hi=lvl(p)>=3;return `<article class="pc lv${lvl(p)}">
       <header><span class="av">${ini(p.name)}</span><input id="pn${p.id}" data-n="${p.id}" value="${p.name.replace(/"/g,"&quot;")}" aria-label="Nome"><span class="lvp">${lvName(p)}</span><button class="ghost" data-up="${p.id}" aria-label="Sposta su ${p.name}" title="Sposta su">▲</button><button class="ghost" data-dn="${p.id}" aria-label="Sposta giù ${p.name}" title="Sposta giù">▼</button><button class="ghost" data-rm="${p.id}" aria-label="Togli ${p.name}">✕</button></header>
       <div class="pf">
-        <label>Livello<select id="pl${p.id}" data-p="${p.id}" data-f="lvl">${opt(String(lvl(p)),Object.fromEntries(S.levels.map((n,i)=>[i+1,n]).filter(([k])=>!me||k<lvl(person(me)))))}</select></label>
+        <label>Livello<select id="pl${p.id}" data-p="${p.id}" data-f="lvl">${opt(String(lvl(p)),Object.fromEntries(S.levels.map((n,i)=>[i+1,n]).filter(([k])=>planOnly()?+k===lvl(p):!me||k<lvl(person(me)))))}</select></label>
         <label>Reparto<select id="pr${p.id}" data-p="${p.id}" data-f="rep">${opt(String(p.rep||0),Object.assign(hi?{0:"Nessuno"}:{},Object.fromEntries(RP().map(r=>[r.id,r.name]))))}</select></label>
         <label class="wide">Piano turni<select id="pp${p.id}" data-p="${p.id}" data-f="prof">${opt(p.prof,hi?{...PROF0,...PROF}:PROF)}</select></label>
         ${inGrid(p)?`<label class="chk wide"><input type="checkbox" id="psw${p.id}" data-sw="${p.id}"${p.sw?" checked":""}> Può chiedere smart working</label>`:""}
       </div>
+      ${planOnly()?"":`<label class="chk wide pianf"><input type="checkbox" id="ppi${p.id}" data-pian="${p.id}"${p.pian?" checked":""}> <span><strong>Pianificatore</strong> · vede Turni (Montastampi, Regole, Giro turni) e Impostazioni solo degli enti scelti</span></label>${p.pian?`<div class="chips"><span class="cl">Pianifica</span>${S.reparti.map(r=>`<label class="chip"><input type="checkbox" id="ppr${p.id}_${r.id}" data-ppr="${p.id}" value="${r.id}"${(pianOf(p)||[]).includes(r.id)?" checked":""}>${r.name}</label>`).join("")}</div>`:""}`}
       ${lvl(p)>1||(p.reps||[]).length?`<div class="chips"><span class="cl">Responsabile anche di</span>${RP().filter(r=>r.id!==p.rep).map(r=>`<label class="chip"><input type="checkbox" id="ps${p.id}_${r.id}" data-seg="${p.id}" value="${r.id}"${(p.reps||[]).includes(r.id)?" checked":""}>${r.name}</label>`).join("")||'<span class="muted">—</span>'}</div>`:""}
       <div class="chips"><span class="cl">Può vedere</span>${RP().map(r=>`<label class="chip"><input type="checkbox" id="pv${p.id}_${r.id}" data-see="${p.id}" value="${r.id}"${seeOf(p).includes(r.id)?" checked":""}>${r.name}</label>`).join("")}</div>
       ${ruleHtml(p)}
@@ -1272,6 +1286,7 @@ function render(){syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOG
     <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:12px"><input id="padd" placeholder="Nome e cognome" style="flex:1;min-width:0"><button class="pri" id="paddb">Aggiungi persona</button></div>`;
     $("pfind").oninput=e=>{window._pq=e.target.value;render();const f=$("pfind");f.focus();f.setSelectionRange(f.value.length,f.value.length)};
     $("pfrep").onchange=e=>{window._pr=+e.target.value;render()};
+    $("pflv").innerHTML=`<option value="0">Tutti i livelli</option>${S.levels.map((n,i)=>`<option value="${i+1}">${n}</option>`).join("")}`;$("pflv").value=String(window._pl||0);$("pflv").onchange=e=>{window._pl=+e.target.value;render()};
     $("ppl").querySelectorAll("[data-n]").forEach(i=>i.onchange=()=>{const v=i.value.trim();if(!v)return toast("Il nome non può essere vuoto");person(+i.dataset.n).name=v;save();fillWho();toast("Nome aggiornato")});
     const mv=(id,dir)=>{const i=S.people.findIndex(p=>p.id===id),p0=S.people[i];let j=i+dir;while(j>=0&&j<S.people.length&&S.people[j].rep!==p0.rep)j+=dir;if(j<0||j>=S.people.length)return toast("È già "+(dir<0?"il primo":"l'ultimo")+" del reparto");S.people.splice(i,1);S.people.splice(j,0,p0);save();fillWho();if(SORT!=="man")toast("Ordine salvato: per vederlo scegli \"Ordine impostato\" sopra la griglia");render()};
     $("ppl").querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>mv(+b.dataset.up,-1));$("ppl").querySelectorAll("[data-dn]").forEach(b=>b.onclick=()=>mv(+b.dataset.dn,1));
@@ -1287,6 +1302,8 @@ function render(){syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOG
     $("ppl").querySelectorAll("[data-rs]").forEach(b=>b.onclick=()=>confirm2(b,()=>{const p=person(+b.dataset.rs);if(FBM){delete p.acc.uid;p.acc.must=true;logIt(p.id,"accesso da ricreare");save();toast("Ora elimina l'utente "+(p.acc.fbu||p.acc.user)+" in Firebase (Authentication → Utenti), poi premi Attiva accessi");render();return}p.acc.must=true;p.acc.tmp=genPw();logIt(p.id,"password reimpostata");save();toast("Nuova password provvisoria pronta");render()}));
     $("ppl").querySelectorAll("[data-np]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.np);if(c.checked){p.acc.nopw=true;delete p.acc.must;delete p.acc.tmp}else{delete p.acc.nopw;p.acc.must=true;p.acc.tmp=genPw()}logIt(p.id,c.checked?"accesso senza password":"accesso con password");save();toast(c.checked?"Ora entra senza password":"Password provvisoria creata");render()});
     $("ppl").querySelectorAll("[data-ra]").forEach(b=>b.onclick=()=>confirm2(b,()=>{const p=person(+b.dataset.ra);delete p.acc;logIt(p.id,"accesso tolto");save();toast("Accesso tolto");render()}));
+    $("ppl").querySelectorAll("[data-pian]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.pian);p.pian=c.checked;if(c.checked&&!(p.pianR||[]).length)p.pianR=p.rep?[p.rep]:[(S.reparti[0]||{}).id];save();fillWho();toast(c.checked?p.name+" ora è pianificatore":"Funzione pianificatore tolta a "+p.name);render()});
+    $("ppl").querySelectorAll("[data-ppr]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.ppr),v=+c.value;let a=(pianOf(p)||[]).filter(x=>x!==v);if(c.checked)a.push(v);if(!a.length){c.checked=true;return toast("Lascia almeno un ente")}p.pianR=a;save();toast("Enti pianificati aggiornati")});
     $("ppl").querySelectorAll("[data-sw]").forEach(c=>c.onchange=()=>{person(+c.dataset.sw).sw=c.checked;save();toast(c.checked?"Smart working abilitato":"Smart working disabilitato")});
     $("ppl").querySelectorAll("select[data-f]").forEach(s=>s.onchange=()=>{const p=person(+s.dataset.p);p[s.dataset.f]=s.dataset.f==="prof"?s.value:+s.value;if(lvl(p)<3){if(!p.rep)p.rep=(S.reparti[0]||{}).id;if(p.prof==="none")p.prof="giornata"}if(s.dataset.f==="rep"&&p.reps)p.reps=p.reps.filter(x=>x!==p.rep);save();fillWho();toast("Profilo aggiornato");render()});
     $("reps").innerHTML=S.reparti.map(r=>{const n=S.people.filter(p=>p.rep===r.id).length;return `<div class="row" style="flex-wrap:nowrap;padding:4px 0"><input id="rn${r.id}" data-rn="${r.id}" value="${r.name.replace(/"/g,"&quot;")}" aria-label="Nome reparto" style="flex:1;min-width:0"><span class="muted">${n} pers.</span>${n||isAutoRep(r)?"":`<button data-rr="${r.id}" aria-label="Elimina reparto">✕</button>`}</div>`}).join("");
@@ -1313,7 +1330,9 @@ function render(){syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOG
      $("arcl").querySelectorAll("[data-ua]").forEach(b=>b.onclick=()=>confirm2(b,()=>archiveYear(+b.dataset.ua,false)));}
     if(FBM){const n=fbPending();$("fbsn").textContent=n?n+" da attivare":"tutti attivi";$("fbsb").onclick=()=>fbSync(true)}else $("fbsr").hidden=true;
     {const L=S.people.filter(p=>p.acc).sort((x,y)=>surn(x.name).localeCompare(surn(y.name),"it"));$("codes").innerHTML=L.length?L.map(p=>`<div class="row" style="justify-content:space-between;padding:3px 0"><span>${p.name} <span class="muted">· ${repName(p.rep)}${FBM&&!p.acc.uid?" · da attivare":p.acc.must?" · primo accesso da fare":""}</span></span><span><code>${p.acc.user}</code>${p.acc.email?` <span class="muted">· ${p.acc.email}</span>`:""}</span></div>`).join(""):'<p class="muted">Nessun accesso creato.</p>'}
-    $("vws").innerHTML=S.viewers.length?S.viewers.map(v=>`<div class="row" style="justify-content:space-between;padding:4px 0"><span>${v.name} <span class="ro">sola lettura</span></span><button data-vr="${v.id}" aria-label="Togli ${v.name}">✕</button></div>`).join(""):'<p class="muted">Nessun utente in sola lettura.</p>';
+    $("vws").innerHTML=S.viewers.length?S.viewers.map(v=>`<div class="row" style="justify-content:space-between;padding:4px 0"><span>${v.name} <span class="ro">sola lettura</span></span><button data-vr="${v.id}" aria-label="Togli ${v.name}">✕</button></div><div class="row" style="padding:0 0 8px;gap:10px"><label class="chk"><input type="checkbox" id="vpi${v.id}" data-vpian="${v.id}"${v.pian?" checked":""}> Pianificatore</label></div>${v.pian?`<div class="chips" style="padding-bottom:8px"><span class="cl">Pianifica</span>${S.reparti.map(r=>`<label class="chip"><input type="checkbox" id="vrp${v.id}_${r.id}" data-vrep="${v.id}" value="${r.id}"${(pianOf(v)||[]).includes(r.id)?" checked":""}>${r.name}</label>`).join("")}</div>`:""}`).join(""):'<p class="muted">Nessun utente in sola lettura.</p>';
+    $("vws").querySelectorAll("[data-vpian]").forEach(c=>c.onchange=()=>{const v=S.viewers.find(x=>x.id==c.dataset.vpian);v.pian=c.checked;if(v.pian&&!(v.pianR||[]).length)v.pianR=[(S.reparti[0]||{}).id];save();fillWho();toast(c.checked?v.name+" ora è pianificatore":"Funzione pianificatore tolta");render()});
+    $("vws").querySelectorAll("[data-vrep]").forEach(c=>c.onchange=()=>{const v=S.viewers.find(x=>x.id==c.dataset.vrep),id=+c.value;let a=(pianOf(v)||[]).filter(x=>x!==id);if(c.checked)a.push(id);if(!a.length){c.checked=true;return toast("Lascia almeno un ente")}v.pianR=a;save();toast("Enti pianificati aggiornati")});
     $("vws").querySelectorAll("[data-vr]").forEach(b=>b.onclick=()=>confirm2(b,()=>{S.viewers=S.viewers.filter(v=>v.id!=b.dataset.vr);save();fillWho();toast("Utente tolto");render()}));
     $("vaddb").onclick=()=>{const v=$("vadd2").value.trim();if(!v)return toast("Scrivi il nome");S.viewers.push({id:Math.max(0,...S.viewers.map(x=>x.id))+1,name:v});save();fillWho();toast("Utente in sola lettura aggiunto");render()};
     $("flist").innerHTML=[...S.fest].sort().map(f=>`<div class="row" style="justify-content:space-between;padding:4px 0"><span>${D(f).toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"long",year:"numeric"})}</span><button data-f="${f}" aria-label="Rimuovi festivo">✕</button></div>`).join("");
@@ -1468,7 +1487,7 @@ function msEnsure(){
   finally{MS.loading=null;ovlOff()}})();
  return MS.loading;
 }
-const msKick=()=>{msEnsure().then(()=>{if(tab==="ms"||tab==="rul")render()})};
+const msKick=()=>{msEnsure().then(()=>{if(tab==="turni")render()})};
 async function msSave(){
  if(!MS.loaded||MS.saving)return false;
  MS.saving=true;msStat("Salvataggio in corso…",false);
@@ -1633,15 +1652,15 @@ function msInit(){
   else if(th){MS.sel=th.dataset.d;render()}};
  $("msiss").onclick=ev=>{const b=ev.target.closest("[data-cd]");if(b&&b.dataset.cd){MS.sel=b.dataset.cd;render();const h=$("msgrid").querySelector(`thead th[data-d="${b.dataset.cd}"]`);if(h&&h.scrollIntoView)h.scrollIntoView({block:"nearest",inline:"center"})}};
  $("msabl").onclick=ev=>{const b=ev.target.closest("[data-ad]");if(b)msAbsDel(b.dataset.ad)};
- document.addEventListener("keydown",ev=>{if((ev.ctrlKey||ev.metaKey)&&String(ev.key).toLowerCase()==="z"&&tab==="ms"&&!/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||"")){ev.preventDefault();if(MS.loaded&&canMsEdit())msDoUndo()}});
+ document.addEventListener("keydown",ev=>{if((ev.ctrlKey||ev.metaKey)&&String(ev.key).toLowerCase()==="z"&&tab==="turni"&&$("acms").open&&!/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||"")){ev.preventDefault();if(MS.loaded&&canMsEdit())msDoUndo()}});
  window.addEventListener("beforeunload",ev=>{if(MS.dirty){ev.preventDefault();ev.returnValue=""}});
 }
 
 /* ===== Scheda Regole: Globali (per reparto) e Individuali (persone Montastampi) ===== */
 const RUL={t:"g",rep:0,mon:"",det:{}};
 const msRep=()=>S.reparti.find(isAutoRep);
-const repAccess=r=>!me||(!!person(me)&&seeOf(person(me)).includes(r.id));
-const repEdit=r=>!ro&&(!me||(!!person(me)&&lvl(person(me))>=2&&segue(person(me)).includes(r.id)));
+const repAccess=r=>planR()&&planR().includes(r.id)?true:planOnly()?false:!me||(!!person(me)&&seeOf(person(me)).includes(r.id));
+const repEdit=r=>planR()&&planR().includes(r.id)?true:planOnly()?false:!ro&&(!me||(!!person(me)&&lvl(person(me))>=2&&segue(person(me)).includes(r.id)));
 function canMsEdit(){const r=msRep();return !!r&&repEdit(r)}
 function msGateNote(){
  if(!TFD.pc)return `<div class="mnone"><strong>Disponibile solo dal PC</strong></div>`;
@@ -1807,16 +1826,16 @@ const render0=render;
 render=function(){render0();try{tfAfter()}catch(e){console.error(e)}};
 function tfAfter(){
  const ar=S.reparti.filter(isAutoRep).filter(repAccess);
- $("tabms").hidden=!ar.length;
- $("tabrul").hidden=!!ro||(!!me&&lvl(person(me))<2);
- if((tab==="ms"&&$("tabms").hidden)||(tab==="rul"&&$("tabrul").hidden)){tab="persone";return render()}
- $("v-ms").hidden=tab!=="ms";$("v-rul").hidden=tab!=="rul";
+ $("acms").hidden=false;
+ if((tab==="imp"||tab==="turni")&&!canSet()){tab="persone";return render()}
+ $("bdgt").hidden=$("bdgms").hidden||$("acms").hidden;$("bdgt").textContent=$("bdgms").textContent;
  tfConfDraw();
- if(tab==="persone"&&repF&&isAutoRep(S.reparti.find(r=>r.id===repF)))$("gtitle").textContent=TFD.pc?"Montastampi: i turni si gestiscono nella scheda Montastampi":"Disponibile solo dal PC (reparto Montastampi)";
- if(tab==="ms")msRender();else if(tab==="rul")rulRender();
+ if(tab==="persone"&&repF&&isAutoRep(S.reparti.find(r=>r.id===repF)))$("gtitle").textContent=TFD.pc?"Montastampi: i turni si gestiscono in Turni › Montastampi":"Disponibile solo dal PC (reparto Montastampi)";
+ if(tab==="turni"){if($("acms").open&&!$("acms").hidden)msRender();if($("acrul").open)rulRender()}
  tfStatus();
 }
 msInit();rulInit();
+["acms","acrul","acgiro"].forEach(id=>$(id).addEventListener("toggle",()=>{if($(id).open)render()}));
 
 render();
 let BOOTP;{let k0=null;try{k0=localStorage.getItem("tf-login")}catch(e){}if(!k0&&!FIREBASE_CONFIG)showLogin()}
