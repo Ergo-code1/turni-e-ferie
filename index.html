@@ -324,8 +324,8 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 
 <section id="v-persone" class="main">
   <div class="card">
-    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px"><h2 id="gtitle" style="margin:0"></h2><label class="srt">Ordina persone<select id="gsort"><option value="man">Ordine impostato</option><option value="cog">Cognome A–Z</option><option value="nom">Nome A–Z</option><option value="liv">Livello</option></select></label></div>
-    <div class="scroll"><table id="grid"></table></div>
+    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px"><h2 id="gtitle" style="margin:0"></h2><input id="gfind" type="search" placeholder="Cerca nome" aria-label="Cerca persona" style="width:150px;align-self:flex-end"><label class="srt">Ordina persone<select id="gsort"><option value="man">Ordine impostato</option><option value="cog">Cognome A–Z</option><option value="cogz">Cognome Z–A</option><option value="nom">Nome A–Z</option><option value="nomz">Nome Z–A</option><option value="liv">Livello</option></select></label></div>
+    <div class="ychips" id="greps"></div><div class="scroll"><table id="grid"></table></div>
     <div class="legend">
       <span style="--c:var(--m)">M 6–14</span><span style="--c:var(--p)">P 14–22</span><span style="--c:var(--n)">N 22–6</span><span style="--c:var(--g)">G 8–17</span><span style="--c:var(--sv)">SV giornata stabilimento SV 8–17</span><span style="--c:var(--co)">CO corso</span><span style="--c:var(--tr)">TR trasferta</span><span style="--c:var(--ma)">CM congedo matrimoniale</span><span style="--c:var(--hi)">BD badge dimenticato (giornata lavorata)</span><span style="--c:var(--we)">Riposo</span><span style="--c:var(--rc)">MA mutua</span><span style="--c:var(--l)">104</span><span style="--c:var(--sw)">SW smart working</span><span style="--c:var(--ma)">DS donazione sangue</span><span style="--c:var(--accent)">EA/UA ingresso/uscita anticipati · +h straordinario</span><span style="--c:var(--fe)">Ferie 8h · barra = ore</span><span style="--c:var(--pend)">In attesa</span><span>● modificato a mano</span>
     </div>
@@ -425,7 +425,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.0.7",APP_REV_DATE="28/10/2026";
+const APP_REV="15.0.8",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -894,9 +894,10 @@ function pwSheet(){if(FBM&&TFD.kind==="firebase")return fbPwSheet("p"+me);const 
 const nowStr=()=>new Date().toISOString();
 const logIt=(pid,txt)=>{S.log.push({at:nowStr(),pid,txt,by:me||0});if(S.log.length>500)S.log=S.log.slice(-500)};
 const repName=id=>(S.reparti.find(r=>r.id===id)||{name:"Senza reparto"}).name;
+let grSel=null,gQ="";
 let SORT="man";try{SORT=localStorage.getItem("tf-sort")||"man"}catch(e){}
 const surn=n=>{const a=n.trim().split(/\s+/);return a.length>1?a.slice(1).join(" ")+" "+a[0]:n};
-const sortP=a=>SORT==="cog"?[...a].sort((x,y)=>surn(x.name).localeCompare(surn(y.name),"it")):SORT==="nom"?[...a].sort((x,y)=>x.name.localeCompare(y.name,"it")):SORT==="liv"?[...a].sort((x,y)=>lvl(y)-lvl(x)||S.people.indexOf(x)-S.people.indexOf(y)):a;
+const sortP=a=>SORT==="cogz"?[...a].sort((x,y)=>surn(y.name).localeCompare(surn(x.name),"it")):SORT==="nomz"?[...a].sort((x,y)=>y.name.localeCompare(x.name,"it")):SORT==="cog"?[...a].sort((x,y)=>surn(x.name).localeCompare(surn(y.name),"it")):SORT==="nom"?[...a].sort((x,y)=>x.name.localeCompare(y.name,"it")):SORT==="liv"?[...a].sort((x,y)=>lvl(y)-lvl(x)||S.people.indexOf(x)-S.people.indexOf(y)):a;
 const vis=()=>sortP((me?S.people.filter(p=>p.id===me||seeOf(person(me)).includes(p.rep)):repF?S.people.filter(p=>p.rep===repF):S.people).filter(inGrid));
 const repsOf=list=>{const ids=[...new Set(list.map(p=>p.rep))];return S.reparti.filter(r=>ids.includes(r.id)).concat(ids.some(i=>!S.reparti.find(r=>r.id===i))?[{id:-1,name:"Senza reparto"}]:[])};
 
@@ -1104,7 +1105,7 @@ async function doExport(){
 }
 
 $("expb").onclick=expSheet;
-$("gsort").value=SORT;$("gsort").onchange=e=>{SORT=e.target.value;try{localStorage.setItem("tf-sort",SORT)}catch(x){}render()};
+$("gfind").oninput=e=>{gQ=e.target.value;GPATCH=null;render()};$("gsort").value=SORT;$("gsort").onchange=e=>{SORT=e.target.value;try{localStorage.setItem("tf-sort",SORT)}catch(x){}render()};
 $("apprev").textContent="Rev. "+APP_REV;$("apprev").title="Revisione "+APP_REV+" del "+APP_REV_DATE;
 let updSkip=0,swReg=null;
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol)){navigator.serviceWorker.register("sw.js").then(r=>{swReg=r}).catch(()=>{});
@@ -1154,10 +1155,16 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     let h='<tr><th class="name" rowspan="2">Persona</th>'+mons.map(([yy,mm,nn])=>`<th class="mh ms" colspan="${nn}">${new Date(yy,mm,1).toLocaleDateString("it-IT",{month:"long",year:"numeric"})}</th>`).join("")+"</tr><tr>";
     for(const day of days){const w=D(day).getDay();h+=`<th class="${S.fest.includes(day)?"fest":w%6===0?"we":""}${ms(day)}${day===todayIso?" tdh":""}"${day===todayIso?' id="tdh"':""}>${"DLMMGVS"[w]}<br>${+day.slice(8)}</th>`}
     h+="</tr>";
-    const V=vis();
+    const VA=vis(),GR0=repsOf(VA).filter(r=>r.id!==-1);if(grSel)grSel=grSel.filter(id=>GR0.some(r=>r.id===id));if(grSel&&!grSel.length)grSel=null;
+    const gOn=id=>!grSel||grSel.includes(id),gq=gQ.trim().toLowerCase();
+    $("greps").innerHTML=GR0.length>1?`<span class="cl muted" style="font-size:12px;font-weight:600">Enti da mostrare</span>${GR0.map(r=>`<label class="chip"><input type="checkbox" data-gr="${r.id}"${gOn(r.id)?" checked":""}>${esc(r.name)}</label>`).join("")}${grSel?'<button class="ghost" id="grall">Tutti</button>':""}`:"";
+    $("greps").querySelectorAll("[data-gr]").forEach(c=>c.onchange=()=>{const id=+c.dataset.gr;let a=grSel?[...grSel]:GR0.map(r=>r.id);a=a.filter(x=>x!==id);if(c.checked)a.push(id);if(!a.length){c.checked=true;return toast("Lascia almeno un ente selezionato")}grSel=a.length===GR0.length?null:a;render()});
+    if($("grall"))$("grall").onclick=()=>{grSel=null;render()};
+    if($("gfind").value!==gQ)$("gfind").value=gQ;
+    const V=VA.filter(p=>(p.id===me||gOn(S.reparti.some(r=>r.id===p.rep)?p.rep:-1))&&(!gq||p.id===me||p.name.toLowerCase().includes(gq)));
     if(gp&&$("grid").rows.length)gridPatch(gp);else{
     for(const rp of repsOf(V)){
-    const grp=V.filter(p=>rp.id===-1?!S.reparti.find(r=>r.id===p.rep):p.rep===rp.id);
+    const inR=p=>rp.id===-1?!S.reparti.find(r=>r.id===p.rep):p.rep===rp.id,grp=V.filter(inR),grpA=VA.filter(inR);
     h+=`<tr class="rep"><td colspan="${days.length+1}"><span class="repn">${rp.name}</span></td></tr>`;
     for(const p of grp){
       const mine=p.id===me;
@@ -1170,7 +1177,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     }
     (rp.tot!==false?["M","P","G","SV","N"]:[]).forEach((k,i)=>{
       h+=`<tr class="tot${i?"":" first"}" data-r="${rp.id}" data-k="${k}"><td class="name"><span class="nf">Totale ${LAB[k]}</span><span class="ns">Tot. ${k}</span></td>`;
-      for(const day of days){const c=gtot(grp,k,day);h+=`<td class="${c?k:""}${ms(day)}">${c||""}</td>`}
+      for(const day of days){const c=gtot(grpA,k,day);h+=`<td class="${c?k:""}${ms(day)}">${c||""}</td>`}
       h+="</tr>";
     });
     }
