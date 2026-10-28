@@ -428,7 +428,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.1.2",APP_REV_DATE="28/10/2026";
+const APP_REV="15.1.3",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -1167,7 +1167,7 @@ async function checkUpdate(){if(!/^https?:$/.test(location.protocol))return;try{
 checkUpdate();setInterval(checkUpdate,15*60*1000);document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkUpdate()});
 let SCRT=true;
 function scrollToday(){const th=$("tdh"),sc=$("grid")&&$("grid").parentElement;if(!th||!sc||tab!=="persone")return false;const nm=$("grid").querySelector("th.name");sc.scrollLeft=Math.max(0,th.offsetLeft-(nm?nm.offsetWidth:0)-4);return true}
-let GPATCH=null;
+let GPATCH=null,gRef=null; // gRef: data scelta per la vista del giro per persona
 // Mese sempre visibile nella colonna Persona: quello del primo giorno visibile a sinistra
 function gMon(){const g=$("grid"),el=$("gmon");if(!g||!el)return;const sc=g.parentElement,nm=g.querySelector("th.name"),x=sc.scrollLeft+(nm?nm.offsetWidth:0)+2;
  let d=null;for(const th of g.querySelectorAll("th[data-hd]")){d=th.dataset.hd;if(th.offsetLeft+th.offsetWidth>x)break}
@@ -1350,8 +1350,8 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     $("vundo").onclick=()=>{delete S.drafts[giroRep];S.doff[giroRep]={};save();toast("Modifiche annullate");render()};
     const v=vs[vi];const base=todayIso<v.from?v.from:todayIso,wk0=Math.floor(Math.round((D(monday(base))-D(monday(v.a||v.from)))/864e5)/7);
     $("vers").innerHTML=vs.map((x,i)=>`<button aria-pressed="${i===vi}" data-v="${i}">Dal ${D(x.from).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"})}${x.to?" al "+D(x.to).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"}):" in poi"}${x.auto?" · automatica":x.uni?" · default "+x.t:""}</button>`).join("");
-    $("vers").querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{vi=+b.dataset.v;render()});
-    $("vfrom").value=v.from;$("vfrom").onchange=e=>{if(!e.target.value)return;v.from=e.target.value;save();toast("Data modificata: premi Rendi operativo");render()};
+    $("vers").querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{vi=+b.dataset.v;gRef=null;render()});
+    $("vfrom").value=v.from;$("vfrom").onchange=e=>{if(!e.target.value)return;v.from=e.target.value;gRef=v.from;save();toast("Data modificata: premi Rendi operativo");render()};
     const edV=()=>{if(v.from>=todayIso)return v;if(v.to&&v.to<todayIso){toast("Versione già conclusa: crea una nuova versione");render();return null}
       let n=DV.find(x=>x.from===todayIso);if(n)return n;n=JSON.parse(JSON.stringify(v));n.from=todayIso;n.a=v.a||v.from;v.to=add(todayIso,-1);DV.push(n);DV.sort((a,b)=>a.from<b.from?-1:1);vi=DV.indexOf(n);return n};
     $("vto").value=v.to||"";$("vto").onchange=e=>{const t=e.target.value;if(t&&t<v.from){toast("La fine non può essere prima dell'inizio");return render()}if(t)v.to=t;else delete v.to;save();toast(t?"Fine impostata: premi Rendi operativo":"Vale da qui in poi");render()};
@@ -1372,12 +1372,12 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     $("addwk").onclick=()=>{const V=edV();if(!V)return;keep(V,()=>V.weeks.push({t:"M",sab:"",dom:""}));save();toast("Settimana aggiunta: premi Rendi operativo");render()};
     $("uni").innerHTML=v.auto?`<p class="muted">Reparto automatico a regole: i turni sono calcolati dal motore con le regole della scheda Regole e gestiti nella scheda Montastampi (solo dal PC). I dati stanno in data/database.db.</p>`:v.uni?`<div class="wkrow"><span class="n">⟳</span><label>Lun–Ven<select id="ut" data-u="t">${opt(v.t,T)}</select></label><label>Sabato<select id="us" data-u="sab">${opt(v.sab||"",SA)}</select></label><label>Domenica<select id="ud" data-u="dom">${opt(v.dom||"",DO)}</select></label></div><p class="muted">Tutte le persone del reparto fanno questo turno, senza rotazione. Chi ha "Nessun piano turni" resta escluso.</p>`:"";
     $("uni").querySelectorAll("[data-u]").forEach(s=>s.onchange=()=>{const V=edV();if(!V)return;V[s.dataset.u]=s.value;save();toast((V===v?"Modifica in bozza":"Modifica valida da oggi")+": premi Rendi operativo");render()});
-    if(!$("vnew").value)$("vnew").value=todayIso;$("vnew").onchange=()=>render();
+    if(!$("vnew").value)$("vnew").value=todayIso;$("vnew").onchange=e=>{gRef=e.target.value||null;render()};
     $("vadd").onclick=()=>{const f=$("vnew").value;if(!f)return toast("Scegli la data di inizio");if(DV.some(x=>x.from===f))return toast("Esiste già una versione con questa data");
       const to=$("vnewto").value;if(to&&to<f)return toast("La fine non può essere prima dell'inizio");const n=JSON.parse(JSON.stringify(v));n.from=f;n.a=v.a||v.from;if(to)n.to=to;else delete n.to;if(!n.auto&&!n.uni&&(n.weeks||[]).length){n.a=f;n.off={};for(const q of S.people.filter(q=>q.rep===giroRep&&inGrid(q)))n.off[q.id]=contIdx(q,n,f)}DV.push(n);$("vnewto").value="";DV.sort((a,b)=>a.from<b.from?-1:1);vi=DV.findIndex(x=>x.from===f);save();toast("Nuova versione creata: ognuno parte dal punto del giro in cui è arrivato la settimana prima");render()};
     {const W=(v.weeks||[]).length;
      const grp=v.auto?[]:S.people.filter(p=>p.rep===giroRep);
-     const ref=$("vnew").value||base,m0=monday(ref);const inV=ref>=v.from&&(!v.to||ref<=v.to),wkR=inV?Math.floor(Math.round((D(m0)-D(monday(v.a||v.from)))/864e5)/7):wk0,refLab=inV?"Sett. del "+(+m0.slice(8))+"/"+(+m0.slice(5,7)):"Questa sett.";
+     const ref=gRef||base,m0=monday(ref);const inV=ref>=v.from&&(!v.to||ref<=v.to),wkR=inV?Math.floor(Math.round((D(m0)-D(monday(v.a||v.from)))/864e5)/7):wk0,refLab=inV?"Sett. del "+(+m0.slice(8))+"/"+(+m0.slice(5,7)):"Questa sett.";
      const wkOf=(p,m)=>{const x=verOf(DV,m);if(!x||x.auto)return null;if(x.uni)return {i:-1,w:{t:x.t,sab:x.sab,dom:x.dom}};const L=x.weeks.length;if(!L)return null;const n=Math.floor(Math.round((D(m)-D(monday(x.a||x.from)))/864e5)/7),i=((n+oo(x,p))%L+L)%L;return {i,w:x.weeks[i]}};
      $("gpnote").textContent=`Settimane dal ${fmt(add(m0,-28))} al ${fmt(add(m0,34))}: evidenziata la settimana del ${fmt(m0)} (data di inizio scelta sopra). La tendina accanto al nome indica quale settimana del giro (S1, S2…) fa la persona ${inV?"nella settimana evidenziata":"questa settimana"}: se la cambi, tutto il suo giro si sposta di conseguenza e dalla settimana dopo prosegue con la successiva.`;
      $("gppl").innerHTML=grp.length?grp.map(p=>{const cur=(((wkR+offOf(p))%W)+W)%W;let cells="";for(let k=-4;k<=4;k++){const m=add(m0,k*7),r=wkOf(p,m);if(!r){cells+=`<span class="gw" title="Settimana del ${fmt(m)}">–<b>·</b><i class="gwd">${+m.slice(8)}/${+m.slice(5,7)}</i></span>`;continue}
