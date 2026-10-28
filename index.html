@@ -98,7 +98,8 @@ tr.rep td{background:var(--we);font-weight:600;text-align:left;padding:0 8px;hei
 body{max-width:1560px;margin-inline:auto;line-height:1.4}
 h1,h2,h3{font-family:var(--disp);text-wrap:balance}
 h2{font-size:16px;font-weight:700;letter-spacing:-.01em}
-.top{background:radial-gradient(120% 140% at 100% 0,var(--ink2),var(--ink));color:var(--onink);border-radius:18px;padding:20px 22px;margin-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0;align-items:center;position:relative;overflow:hidden}
+.top{background:radial-gradient(120% 140% at 100% 0,var(--ink2),var(--ink));color:var(--onink);border-radius:18px;padding:20px 22px;margin-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0;align-items:center;position:relative;overflow:hidden;overflow:clip}
+.top>.row{min-width:0;max-width:100%;flex-wrap:wrap}.top label{min-width:0;max-width:100%}
 .top::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--mfg) 0 25%,var(--pfg) 25% 50%,var(--gfg) 50% 75%,var(--nfg) 75%)}
 .top h1{font-size:28px;font-weight:800;letter-spacing:-.02em;color:var(--onink)}
 .top .muted{color:var(--onink2)}
@@ -425,7 +426,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.0.10",APP_REV_DATE="28/10/2026";
+const APP_REV="15.0.11",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -802,6 +803,8 @@ function totals(p,Y){
 let ro=false,repF=0,giroRep=0;
 let cur={y:new Date().getFullYear(),m:new Date().getMonth()},me=0,sel=[],tab="persone",hrs=8,tipo="F",vi=0;
 const $=id=>document.getElementById(id);
+// Il riquadro in alto non deve mai restare spostato di lato (succedeva su Android con caratteri grandi)
+{const fixTop=()=>document.querySelectorAll(".top,.top .row").forEach(e=>{if(e.scrollLeft)e.scrollLeft=0});addEventListener("resize",fixTop);document.addEventListener("focusin",()=>setTimeout(fixTop,50));document.addEventListener("scroll",fixTop,{passive:true,capture:true});setTimeout(fixTop,500)}
 document.getElementById("fdvw").addEventListener("toggle",()=>{if(document.getElementById("fdvw").open)loadAcc()});
 const iso=(y,m,d)=>`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 const D=s=>new Date(s+"T12:00");
