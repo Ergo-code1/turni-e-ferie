@@ -425,7 +425,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.0.2",APP_REV_DATE="28/10/2026";
+const APP_REV="15.0.3",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -483,7 +483,7 @@ if(normS()){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 const TFD={cid:Math.random().toString(36).slice(2),kind:"local",pc:false,ready:false,dirty:false,busy:false,again:false,pend:false,err:"",timer:0,fb:null,sig:{},paths:[]};
 const tfLabel=()=>({firebase:"Dati su Firebase",python:"Dati sul server locale (turniferie.db)",local:"Dati salvati in questo browser"})[TFD.kind]+(TFD.err?" · "+TFD.err:(TFD.dirty&&TFD.kind!=="local")?" · salvataggio in corso":"");
 function tfStatus(){const e=document.getElementById("dsub");if(e)e.textContent=tfLabel()}
-const save=()=>{if(typeof fixCodes==="function")fixCodes(true);if(FBM&&LOGGED==="a"&&S.admOk&&!FBS&&fbPending())setTimeout(()=>fbSync(),1500);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(TFD.kind!=="local")tfQueue()};
+const save=()=>{clrPC();if(typeof fixCodes==="function")fixCodes(true);if(FBM&&LOGGED==="a"&&S.admOk&&!FBS&&fbPending())setTimeout(()=>fbSync(),1500);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(TFD.kind!=="local")tfQueue()};
 function tfQueue(){TFD.dirty=true;TFD.err="";tfStatus();if(!TFD.ready){TFD.pend=true;return}clearTimeout(TFD.timer);TFD.timer=setTimeout(tfFlush,500)}
 async function tfFlush(){
  if(TFD.busy){TFD.again=true;return}
@@ -791,7 +791,9 @@ const DOWN=["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","
 const RULC={M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",SV:"Giornata SV",SW:"Smart working",R:"Riposo"};
 function applyRules(p,day,s){const rs=p.rules;if(!rs||!rs.length)return s;const dow=D(day).getDay();
  for(const r of rs){if(r.dow!==dow||(r.from&&day<r.from)||(r.to&&day>r.to))continue;if(!r.always&&s==="R")continue;if(r.every>1){const k=Math.round((D(monday(day))-D(monday(r.from||"2026-01-05")))/6048e5);if(((k%r.every)+r.every)%r.every)continue}return r.code}return s}
-function plan0(p,day){const s0=plan0b(p,day);return (p.prof==="none"||!p.rep||S.fest.includes(day))?s0:applyRules(p,day,s0)}
+const P0C=new Map();const clrPC=()=>P0C.clear();
+function plan0(p,day){const ck=p.id+"|"+day;let v=P0C.get(ck);if(v===undefined){v=plan0x(p,day);P0C.set(ck,v)}return v}
+function plan0x(p,day){const s0=plan0b(p,day);return (p.prof==="none"||!p.rep||S.fest.includes(day))?s0:applyRules(p,day,s0)}
 function plan0b(p,day){
   if(p.prof==="none"||!p.rep)return "R";
   if(S.fest.includes(day))return "R";
@@ -820,7 +822,8 @@ const shift=(p,day)=>{const o=S.ov[p.id+"|"+day];return o==="RC"?"R":o||plan(p,d
 function conflicts(pid,days){const out=[],rp=person(pid).rep;if(!rp)return out;for(const d of days){const who=S.people.filter(p=>p.id!==pid&&p.rep===rp&&S.reqs.some(r=>r.pid===p.id&&r.st==="ok"&&r.days.includes(d))).map(p=>p.name.split(" ")[0]);if(who.length)out.push(fmt(d)+": "+who.join(", "))}return out}
 const reqOf=(pid,day)=>S.reqs.find(r=>r.pid===pid&&r.days.includes(day)&&r.st!=="no");
 const absent=(p,day)=>{const s=shift(p,day),r=reqOf(p.id,day);return ["MA","L","F","DS","CO","TR","CM"].includes(s)||(r&&r.st==="ok"&&(r.tipo==="DS"||r.tipo==="CO"||r.tipo==="TR"||(["F","L"].includes(r.tipo)&&r.h===8)))};
-const fmt=d=>D(d).toLocaleDateString("it-IT",{day:"numeric",month:"short"});
+const FMTF=new Intl.DateTimeFormat("it-IT",{day:"numeric",month:"short"}),FMTC=new Map();
+const fmt=d=>{let v=FMTC.get(d);if(v===undefined){v=FMTF.format(D(d));FMTC.set(d,v)}return v};
 const isWe=day=>D(day).getDay()%6===0||S.fest.includes(day);
 function toast(t){const e=$("toast");e.textContent=t;e.hidden=false;clearTimeout(e._t);e._t=setTimeout(()=>e.hidden=true,2200)}
 const opt=(v,o)=>Object.entries(o).map(([k,l])=>`<option value="${k}"${k===v?" selected":""}>${l}</option>`).join("");
@@ -940,7 +943,7 @@ function editCell(p,day){
    if($("rqall"))$("rqall").onclick=()=>confirm2($("rqall"),()=>{S.reqs=S.reqs.filter(x=>x!==r);lg(`${fmt(r.days[0])}–${fmt(r.days[r.days.length-1])} revocata`);save();closeSheet();toast("Richiesta revocata");render()});
    if($("rqh"))$("rqh").onchange=e=>{const h=+e.target.value;if(r.days.length===1)r.h=h;else{cut();S.reqs.push(Object.assign(JSON.parse(JSON.stringify(r)),{id:Date.now(),days:[day],h}))}lg(`${fmt(day)} → ${h} h`);save();closeSheet();toast("Ore aggiornate: "+h+" h");render()};
    if($("rqpdf"))$("rqpdf").onclick=()=>makePdf(r)}
-  s.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{const k=p.id+"|"+day;if(b.dataset.k)S.ov[k]=b.dataset.k;else delete S.ov[k];logIt(p.id,`turno di ${fmt(day)} → ${b.dataset.k?LAB[b.dataset.k]:"come da giro"}`);save();closeSheet();toast(b.dataset.k?LAB[b.dataset.k]+" impostato":"Ripristinato dal giro");render()});
+  s.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{const k=p.id+"|"+day;if(b.dataset.k)S.ov[k]=b.dataset.k;else delete S.ov[k];logIt(p.id,`turno di ${fmt(day)} → ${b.dataset.k?LAB[b.dataset.k]:"come da giro"}`);save();closeSheet();toast(b.dataset.k?LAB[b.dataset.k]+" impostato":"Ripristinato dal giro");GPATCH={pid:p.id,days:[day]};render()});
 }
 function reqSheet(){
   const s=$("sheet");if(!sel.length)return closeSheet();
@@ -1087,7 +1090,21 @@ async function checkUpdate(){if(!/^https?:$/.test(location.protocol))return;try{
 checkUpdate();setInterval(checkUpdate,15*60*1000);document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkUpdate()});
 let SCRT=true;
 function scrollToday(){const th=$("tdh"),sc=$("grid")&&$("grid").parentElement;if(!th||!sc||tab!=="persone")return false;const nm=$("grid").querySelector("th.name");sc.scrollLeft=Math.max(0,th.offsetLeft-(nm?nm.offsetWidth:0)-4);return true}
-function render(){syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOGGED)setTimeout(()=>{if(SCRT&&scrollToday())SCRT=false},0);{const ys=arcYearsNeeded(),b=$("arcban");if(b){const ay=(tab==="ore"?oy:cur.y);b.hidden=!isArc(ay);b.textContent=isArc(ay)?(ARC[ay]?"📦 Anno "+ay+" archiviato":"📦 Anno "+ay+" archiviato · caricamento…"):""}ys.forEach(y=>{if(!ARC[y])ensureYear(y)})}
+let GPATCH=null;
+const gms=day=>day.endsWith("-01")?" ms":"";
+function gcell(p,day){const c=cellOf(p,day),mine=p.id===me;
+  let cls=c.cls+gms(day)+(c.s==="R"&&isWe(day)?" we":"");if(sel.includes(day)&&mine)cls+=" sel";
+  cls+=ro?"":me?(mine?(!c.r&&!["R","RC","MA"].includes(c.s)?" click":""):isAppr(p.id)?" click":" lock"):" click";return [cls,c.txt]}
+const gtot=(grp,k,day)=>grp.filter(p=>shift(p,day)===k&&!absent(p,day)).length;
+// Aggiorna solo le celle toccate (persona, giorni vicini) e i totali del suo reparto, senza ridisegnare tutta la griglia
+function gridPatch({pid,days}){const p=person(pid),g=$("grid");if(!p||!g)return;
+  const ds=[...new Set(days.flatMap(d=>[-3,-2,-1,0,1,2,3].map(k=>add(d,k))))];
+  const V=vis(),grp=V.filter(q=>q.rep===p.rep),hdr=g.rows[1];
+  for(const day of ds){const td=g.querySelector(`td[data-p="${pid}"][data-d="${day}"]`);if(!td)continue;
+    const [cls,txt]=gcell(p,day);td.className=cls;td.textContent=txt;td.removeAttribute("title");
+    const ix=td.cellIndex;g.querySelectorAll(`tr.tot[data-r="${p.rep}"]`).forEach(tr=>{const c=gtot(grp,tr.dataset.k,day),cell=tr.cells[ix];if(cell){cell.className=(c?tr.dataset.k:"")+gms(day);cell.textContent=c||""}})}
+}
+function render(){clrPC();syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOGGED)setTimeout(()=>{if(SCRT&&scrollToday())SCRT=false},0);{const ys=arcYearsNeeded(),b=$("arcban");if(b){const ay=(tab==="ore"?oy:cur.y);b.hidden=!isArc(ay);b.textContent=isArc(ay)?(ARC[ay]?"📦 Anno "+ay+" archiviato":"📦 Anno "+ay+" archiviato · caricamento…"):""}ys.forEach(y=>{if(!ARC[y])ensureYear(y)})}
   const{y,m}=cur,n=new Date(y,m+1,0).getDate();
   $("tabimp").hidden=$("tabturni").hidden=!canSet();document.querySelector('.tabs button[data-t="ore"]').hidden=!oreOk();$("repl").hidden=!!me;$("expb").hidden=!canExp();
   document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===tab));
@@ -1095,7 +1112,7 @@ function render(){syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOG
   $("mlabel").textContent=new Date(y,m,1).toLocaleDateString("it-IT",{month:"long",year:"numeric"});
   $("gtitle").textContent=me?`${lvName(person(me))}${inGrid(person(me))?" · tocca i giorni sulla tua riga per chiedere ferie o permessi":" · senza piano turni"}${approvers(person(me)).length?"":""}${S.people.some(q=>q.id!==me&&isAppr(q.id))?"; tocca la riga di chi gestisci per cambiargli il turno":""}`:ro?"Sola lettura: puoi vedere tutto ma non modificare":"Tocca le celle per la modifica manuale";
 
-  if(tab==="persone"){
+  if(tab==="persone"){const gp=GPATCH;GPATCH=null;
     const days=[],mons=[];
     for(let k=0;k<12;k++){const yy=y+Math.floor((m+k)/12),mm=(m+k)%12,nn=new Date(yy,mm+1,0).getDate();mons.push([yy,mm,nn]);for(let d=1;d<=nn;d++)days.push(iso(yy,mm,d))}
     const ms=day=>day.endsWith("-01")?" ms":"";
@@ -1103,6 +1120,7 @@ function render(){syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOG
     for(const day of days){const w=D(day).getDay();h+=`<th class="${S.fest.includes(day)?"fest":w%6===0?"we":""}${ms(day)}${day===todayIso?" tdh":""}"${day===todayIso?' id="tdh"':""}>${"DLMMGVS"[w]}<br>${+day.slice(8)}</th>`}
     h+="</tr>";
     const V=vis();
+    if(gp&&$("grid").rows.length)gridPatch(gp);else{
     for(const rp of repsOf(V)){
     const grp=V.filter(p=>rp.id===-1?!S.reparti.find(r=>r.id===p.rep):p.rep===rp.id);
     h+=`<tr class="rep"><td colspan="${days.length+1}"><span class="repn">${rp.name}</span></td></tr>`;
@@ -1110,25 +1128,23 @@ function render(){syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOG
       const mine=p.id===me;
       const pn=p.name.trim().split(/\s+/),sn=pn.length>1?pn[0]+" "+pn[pn.length-1][0]+".":p.name;
       h+=`<tr><td class="name" title="${p.name} · ${PROF[p.prof]}"><span class="nf">${p.name}</span><span class="ns">${sn}</span></td>`;
-      for(const day of days){
-        const c=cellOf(p,day);
-        let cls=c.cls+ms(day)+(c.s==="R"&&isWe(day)?" we":"");if(sel.includes(day)&&mine)cls+=" sel";
-        cls+=ro?"":me?(mine?(!c.r&&!["R","RC","MA"].includes(c.s)?" click":""):isAppr(p.id)?" click":" lock"):" click";
-        h+=`<td class="${cls}" data-p="${p.id}" data-d="${day}" title="${p.name} · ${fmt(day)} · ${LAB[c.s]}">${c.txt}</td>`;
+      for(const day of days){const [cls,txt]=gcell(p,day);
+        h+=`<td class="${cls}" data-p="${p.id}" data-d="${day}">${txt}</td>`;
       }
       h+="</tr>";
     }
     (rp.tot!==false?["M","P","G","SV","N"]:[]).forEach((k,i)=>{
-      h+=`<tr class="tot${i?"":" first"}"><td class="name"><span class="nf">Totale ${LAB[k]}</span><span class="ns">Tot. ${k}</span></td>`;
-      for(const day of days){const c=grp.filter(p=>shift(p,day)===k&&!absent(p,day)).length;h+=`<td class="${c?k:""}${ms(day)}">${c||""}</td>`}
+      h+=`<tr class="tot${i?"":" first"}" data-r="${rp.id}" data-k="${k}"><td class="name"><span class="nf">Totale ${LAB[k]}</span><span class="ns">Tot. ${k}</span></td>`;
+      for(const day of days){const c=gtot(grp,k,day);h+=`<td class="${c?k:""}${ms(day)}">${c||""}</td>`}
       h+="</tr>";
     });
     }
-    const sc=$("grid").parentElement,keep=sc.scrollLeft;$("grid").innerHTML=h;sc.scrollLeft=keep;
-    $("grid").querySelectorAll("td.click").forEach(td=>td.onclick=()=>{
+    const sc=$("grid").parentElement,keep=sc.scrollLeft;$("grid").innerHTML=h;sc.scrollLeft=keep;}
+    $("grid").onmouseover=ev=>{const td=ev.target.closest("td[data-d]");if(!td||td.title)return;const p=person(+td.dataset.p);if(p)td.title=`${p.name} · ${fmt(td.dataset.d)} · ${LAB[shift(p,td.dataset.d)]||""}`};
+    $("grid").onclick=ev=>{const td=ev.target.closest("td.click");if(!td)return;
       const p=person(+td.dataset.p),day=td.dataset.d;
-      if(me&&p.id===me){sel=sel.includes(day)?sel.filter(x=>x!==day):[...sel,day];render();reqSheet()}else editCell(p,day);
-    });
+      if(me&&p.id===me){sel=sel.includes(day)?sel.filter(x=>x!==day):[...sel,day];td.classList.toggle("sel",sel.includes(day));reqSheet()}else editCell(p,day);
+    };
     const vids=V.map(p=>p.id),list=(me?S.reqs.filter(r=>r.pid===me||isAppr(r.pid)):S.reqs.filter(r=>vids.includes(r.pid))).filter(r=>r.st==="wait"),ord={wait:0,ok:1,no:2};
     $("rtitle").textContent=me?(S.people.some(q=>q.id!==me&&isAppr(q.id))?"Richieste da approvare e mie in attesa":"Le mie richieste in attesa"):"Richieste da approvare";
     $("reqs").innerHTML=list.length?[...list].sort((a,b)=>ord[a.st]-ord[b.st]||(a.days[0]<b.days[0]?-1:1)).map(r=>{
