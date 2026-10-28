@@ -153,6 +153,8 @@ h3{font-size:18px;font-weight:800;color:var(--fg);margin:28px 0 10px;padding-bot
 .ore th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:transparent;white-space:normal;vertical-align:bottom}
 .ore td.name{font-family:var(--sans);font-weight:600}
 .ore tr:hover td{background:var(--soft)}
+.ore th.name{background:var(--panel);position:sticky;left:0;z-index:3}.ore td.name{z-index:2}
+.gmon{display:block;margin-top:3px;font-size:12px;font-weight:700;color:var(--accent);text-transform:capitalize;white-space:pre-line;line-height:1.2}
 .wkrow .n,.prow strong{font-family:var(--disp)}
 .vers button[aria-pressed="true"]{background:var(--accent);color:var(--fefg)}
 .sheet{border-radius:20px 20px 0 0;max-width:920px;margin-inline:auto;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgb(0 0 0/.2)}
@@ -426,7 +428,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.0.11",APP_REV_DATE="28/10/2026";
+const APP_REV="15.0.12",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -1164,6 +1166,10 @@ checkUpdate();setInterval(checkUpdate,15*60*1000);document.addEventListener("vis
 let SCRT=true;
 function scrollToday(){const th=$("tdh"),sc=$("grid")&&$("grid").parentElement;if(!th||!sc||tab!=="persone")return false;const nm=$("grid").querySelector("th.name");sc.scrollLeft=Math.max(0,th.offsetLeft-(nm?nm.offsetWidth:0)-4);return true}
 let GPATCH=null;
+// Mese sempre visibile nella colonna Persona: quello del primo giorno visibile a sinistra
+function gMon(){const g=$("grid"),el=$("gmon");if(!g||!el)return;const sc=g.parentElement,nm=g.querySelector("th.name"),x=sc.scrollLeft+(nm?nm.offsetWidth:0)+2;
+ let d=null;for(const th of g.querySelectorAll("th[data-hd]")){d=th.dataset.hd;if(th.offsetLeft+th.offsetWidth>x)break}
+ if(d){const t=D(d).toLocaleDateString("it-IT",{month:"long"})+"\n"+d.slice(0,4);if(el.textContent!==t)el.textContent=t}}
 const gms=day=>day.endsWith("-01")?" ms":"";
 function gcell(p,day){const c=cellOf(p,day),mine=p.id===me;
   let cls=c.cls+gms(day)+(c.s==="R"&&isWe(day)?" we":"");if(sel.includes(day)&&mine)cls+=" sel";
@@ -1195,8 +1201,8 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     const days=[],mons=[];
     for(let k=0;k<12;k++){const yy=y+Math.floor((m+k)/12),mm=(m+k)%12,nn=new Date(yy,mm+1,0).getDate();mons.push([yy,mm,nn]);for(let d=1;d<=nn;d++)days.push(iso(yy,mm,d))}
     const ms=day=>day.endsWith("-01")?" ms":"";
-    let h='<tr><th class="name" rowspan="2">Persona</th>'+mons.map(([yy,mm,nn])=>`<th class="mh ms" colspan="${nn}">${new Date(yy,mm,1).toLocaleDateString("it-IT",{month:"long",year:"numeric"})}</th>`).join("")+"</tr><tr>";
-    for(const day of days){const w=D(day).getDay();h+=`<th class="${S.fest.includes(day)?"fest":w%6===0?"we":""}${ms(day)}${day===todayIso?" tdh":""}"${day===todayIso?' id="tdh"':""}>${"DLMMGVS"[w]}<br>${+day.slice(8)}</th>`}
+    let h='<tr><th class="name" rowspan="2">Persona<span id="gmon" class="gmon"></span></th>'+mons.map(([yy,mm,nn])=>`<th class="mh ms" colspan="${nn}">${new Date(yy,mm,1).toLocaleDateString("it-IT",{month:"long",year:"numeric"})}</th>`).join("")+"</tr><tr>";
+    for(const day of days){const w=D(day).getDay();h+=`<th class="${S.fest.includes(day)?"fest":w%6===0?"we":""}${ms(day)}${day===todayIso?" tdh":""}"${day===todayIso?' id="tdh"':""} data-hd="${day}">${"DLMMGVS"[w]}<br>${+day.slice(8)}</th>`}
     h+="</tr>";
     const VA=vis(),GR0=repsOf(VA).filter(r=>r.id!==-1);if(grSel)grSel=grSel.filter(id=>GR0.some(r=>r.id===id));if(grSel&&!grSel.length)grSel=null;
     const gOn=id=>!grSel||grSel.includes(id),gq=gQ.trim().toLowerCase();
@@ -1224,7 +1230,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
       h+="</tr>";
     });
     }
-    const sc=$("grid").parentElement,keep=sc.scrollLeft;$("grid").innerHTML=h;sc.scrollLeft=keep;}
+    const sc=$("grid").parentElement,keep=sc.scrollLeft;$("grid").innerHTML=h;sc.scrollLeft=keep;sc.onscroll=gMon;gMon()}
     $("grid").onmouseover=ev=>{const td=ev.target.closest("td[data-d]");if(!td||td.title)return;const p=person(+td.dataset.p);if(p)td.title=`${p.name} · ${fmt(td.dataset.d)} · ${LAB[shift(p,td.dataset.d)]||""}`};
     $("grid").onclick=ev=>{const td=ev.target.closest("td.click");if(!td)return;
       const p=person(+td.dataset.p),day=td.dataset.d;
