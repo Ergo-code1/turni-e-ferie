@@ -355,7 +355,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 <details class="fold adm" id="fdnomiuten"><summary><span>Nomi utente</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Nome utente = prime 3 lettere del nome + prime 3 del cognome. Password iniziale <code>123</code>, da cambiare al primo accesso. Tu entri come <code>admin</code>.</p><div id="codes"></div><div class="row" style="margin-top:8px" id="fbsr"><button id="fbsb">Attiva accessi Firebase</button><span class="muted" id="fbsn"></span></div></div></details>
 <details class="fold adm" id="fdvw"><summary><span>Utenti in sola lettura</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Vedono tutti i reparti, turni, richieste e ore, ma non possono modificare nulla. Con la spunta Pianificatore possono gestire Turni e Impostazioni degli enti scelti.</p><div id="vws"></div><div class="row" style="margin-top:8px"><input id="vadd2" placeholder="Nome" style="flex:1;min-width:0"><button id="vaddb">Aggiungi utente</button></div></div></details>
 <details class="fold" id="fdtot"><summary><span>Totali per turno</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Scegli in quali reparti mostrare sotto la griglia le righe con quante persone ci sono in Mattina, Pomeriggio, Giornata e Notte.</p><div id="totlist"></div></div></details>
-<details class="fold adm" id="fdfest"><summary><span>Giorni festivi</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Nei festivi tutti sono a riposo, salvo modifiche a mano.</p><div class="row"><input type="date" id="fnew" aria-label="Data festivo"><button id="fadd">Aggiungi</button></div><div id="flist" style="margin-top:8px"></div></div></details>
+<details class="fold adm pfest" id="fdfest"><summary><span>Giorni festivi</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Nei festivi tutti sono a riposo, salvo modifiche a mano.</p><div class="row"><input type="date" id="fnew" aria-label="Data festivo"><button id="fadd">Aggiungi</button></div><div id="flist" style="margin-top:8px"></div></div></details>
 <details class="fold adm" id="fdres"><summary><span>Dati di esempio</span></summary><div class="fb"><button id="reset">Ripristina dati di esempio</button></div></details>
 </section>
 
@@ -425,7 +425,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.0.3",APP_REV_DATE="28/10/2026";
+const APP_REV="15.0.4",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -766,7 +766,8 @@ let oy=new Date().getFullYear();
 function totals(p,Y){
   const o={lav:0,fer:0,mal:0,l104:0,rc:0,pend:0,ea:0,st:0,sw:0,ds:0,co:0,tr:0,cm:0};
   for(let d=iso(Y,0,1),e=iso(Y+1,0,1);d<e;d=add(d,1)){
-    const s=shift(p,d),r=reqOf(p.id,d);
+    const s=shift(p,d),r=reqOf(p.id,d),nof=isWe(d)||S.fest.includes(d);
+    if(nof&&(s==="F"||(r&&r.tipo==="F")))continue; // ferie su sabato, domenica o festivo: non contano
     if(s==="MA")o.mal+=1;else if(s==="L")o.l104+=8;else if(s==="F")o.fer+=8;else if(s==="DS")o.ds++;else if(s==="SW")o.sw++;else if(s==="CO")o.co++;else if(s==="TR")o.tr++;else if(s==="CM")o.cm++;
     else if(s!=="R"){
       if(r&&r.st==="ok"){const t=r.tipo;if(t==="L")o.l104+=r.h;else if(t==="F")o.fer+=r.h;else if(t==="ST")o.st+=r.h;else if(t==="SW")o.sw++;else if(t==="DS")o.ds++;else if(t==="CO")o.co++;else if(t==="TR")o.tr++;else o.ea+=r.h}
@@ -782,6 +783,22 @@ const iso=(y,m,d)=>`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"
 const D=s=>new Date(s+"T12:00");
 const add=(s,n)=>{const x=D(s);x.setDate(x.getDate()+n);return iso(x.getFullYear(),x.getMonth(),x.getDate())};
 const monday=s=>{const x=D(s);return add(s,-((x.getDay()+6)%7))};
+// Turno atteso per una persona in una settimana del giro (stessa logica di plan0b)
+function expW(p,w,dow){const end=dow===6?(w.sab||"R"):dow===0?(w.dom||"R"):null;
+  if(p.prof==="giornata")return end?"R":"G";if(p.prof==="giornataSV")return end?"R":"SV";if(p.prof==="standard")return end||w.t;
+  if(!end)return w.t==="N"?"N":w.t==="SV"?"SV":"G";return p.prof==="dnw"?end:"R"}
+// Settimana del giro da cui ripartire il "dal" f: riconosce dai turni reali (comprese le modifiche a mano)
+// delle 6 settimane prima quale settimana del giro stava facendo la persona, e riparte dalla successiva
+function contIdx(p,v,f){const W=v.weeks,L=W.length,m0=monday(f),T=["M","P","N","G","SV","R"];
+  const prev=verOf(versOf(p),add(m0,-1)),base=(()=>{if(!prev||prev.auto||prev.uni||!(prev.weeks||[]).length||prev.weeks.length!==L)return 0;
+    const wk=Math.floor(Math.round((D(m0)-D(monday(prev.a||prev.from)))/864e5)/7);return((wk+oo(prev,p))%L+L)%L})();
+  let best=base,bs=-1;
+  for(let i=0;i<L;i++){let sc=0;
+    for(let k=1;k<=6;k++){const w=W[((i-k)%L+L)%L],m=add(m0,-7*k);
+      for(let d=0;d<7;d++){const day=add(m,d);if(S.fest.includes(day))continue;const a=shift(p,day);if(!T.includes(a))continue;
+        if(a===expW(p,w,D(day).getDay()))sc+=1}}
+    if(sc>bs||(sc===bs&&i===base)){bs=sc;best=i}}
+  return best}
 const verOf=(vs,day)=>{const o=[...vs].sort((a,b)=>a.from<b.from?-1:1);return o.filter(v=>v.from<=day&&(!v.to||day<=v.to)).pop()||o.filter(v=>v.from<=day&&!v.to).pop()||o[0]};
 const oo=(v,p)=>(v.off&&v.off[p.id]!=null)?v.off[p.id]:p.off;
 const myR=()=>planOnly()?planR():me?[...new Set([...segue(person(me)),...(planR()||[])])]:S.reparti.map(r=>r.id);
@@ -1232,7 +1249,7 @@ function render(){clrPC();syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(S
   }
 
   if(tab==="imp"||tab==="turni"){
-    document.querySelectorAll(".adm").forEach(e=>e.hidden=!!me||!!ro);$("impnote").hidden=!(me||ro);$("impnote").textContent=(me||ro)?(planR()?"Pianificatore · ":"")+"Puoi modificare giro, turno default, regole e persone solo di: "+RP().map(r=>r.name).join(", ")+".":"";
+    document.querySelectorAll(".adm").forEach(e=>e.hidden=(!!me||!!ro)&&!(e.classList.contains("pfest")&&planR()));$("impnote").hidden=!(me||ro);$("impnote").textContent=(me||ro)?(planR()?"Pianificatore · ":"")+"Puoi modificare giro, turno default, regole e persone solo di: "+RP().map(r=>r.name).join(", ")+".":"";
     if(!RP().some(r=>r.id===giroRep))giroRep=(RP()[0]||{}).id;
     const GR=S.reparti.find(r=>r.id===giroRep);
     $("grep").innerHTML=RP().map(r=>`<option value="${r.id}">${r.name}${S.drafts[r.id]&&JSON.stringify(S.drafts[r.id])!==JSON.stringify(r.versions)?" (modifiche in bozza)":""}</option>`).join("");$("grep").value=String(giroRep);
@@ -1271,7 +1288,7 @@ function render(){clrPC();syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(S
     $("uni").querySelectorAll("[data-u]").forEach(s=>s.onchange=()=>{const V=edV();if(!V)return;V[s.dataset.u]=s.value;save();toast((V===v?"Modifica in bozza":"Modifica valida da oggi")+": premi Rendi operativo");render()});
     if(!$("vnew").value)$("vnew").value=todayIso;
     $("vadd").onclick=()=>{const f=$("vnew").value;if(!f)return toast("Scegli la data di inizio");if(DV.some(x=>x.from===f))return toast("Esiste già una versione con questa data");
-      const to=$("vnewto").value;if(to&&to<f)return toast("La fine non può essere prima dell'inizio");const n=JSON.parse(JSON.stringify(v));n.from=f;n.a=v.a||v.from;if(to)n.to=to;else delete n.to;DV.push(n);$("vnewto").value="";DV.sort((a,b)=>a.from<b.from?-1:1);vi=DV.findIndex(x=>x.from===f);save();toast("Nuova versione creata: modificala qui sotto");render()};
+      const to=$("vnewto").value;if(to&&to<f)return toast("La fine non può essere prima dell'inizio");const n=JSON.parse(JSON.stringify(v));n.from=f;n.a=v.a||v.from;if(to)n.to=to;else delete n.to;if(!n.auto&&!n.uni&&(n.weeks||[]).length){n.a=f;n.off={};for(const q of S.people.filter(q=>q.rep===giroRep&&inGrid(q)))n.off[q.id]=contIdx(q,n,f)}DV.push(n);$("vnewto").value="";DV.sort((a,b)=>a.from<b.from?-1:1);vi=DV.findIndex(x=>x.from===f);save();toast("Nuova versione creata: ognuno parte dal punto del giro in cui è arrivato la settimana prima");render()};
     {const W=(v.weeks||[]).length;
      const grp=v.auto?[]:S.people.filter(p=>p.rep===giroRep);
      $("gpnote").textContent=`Scegli quale settimana del giro fa ogni persona ${todayIso<v.from?"all'inizio di questa versione":"questa settimana"}: dalla settimana dopo prosegue con la successiva. Se aggiungi o togli settimane, ognuno resta sulla sua.`;
