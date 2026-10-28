@@ -428,7 +428,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.0.12",APP_REV_DATE="28/10/2026";
+const APP_REV="15.0.13",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -461,7 +461,7 @@ const DEMO=()=>({
 /* ===== Strato dati Turni-Ferie: Firebase -> Python+SQLite (/api/tf/state) -> localStorage "turniferie-v4" ===== */
 const KEY="turniferie-v4";
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-if(!S||!S.versions)S=DEMO();
+if(!S||!S.versions)S=DEMO();if(Array.isArray(S.people))S.people.sort(pOrd);
 const isAutoRep=r=>!!(r&&(r.versions||[]).some(v=>v&&v.auto));
 function normS(){
 if(S&&Array.isArray(S.reqs))S.reqs=S.reqs.filter(r=>r.st!=="no");
@@ -668,13 +668,15 @@ function loginGate(){fixCodes();if(LOGGED)return;if(FBM&&TFD.kind==="firebase")r
 // --- Dati su Firebase, struttura v2: tanti documenti piccoli, aggiornati campo per campo ---
 // turniferie/config · persone/{rep} {p:{id:persona}} · rq/{rep}_{aaaa-mm} {r:{id:richiesta}} · ov/{rep}_{aaaa-mm} {o:{"pid|data":turno}}
 // regole/{id} {d:regola} · archivio_rq/… e archivio_ov/… per gli anni archiviati · utenti/{uid}
+// Ordine persone: prima chi è stato spostato a mano (campo ord, salvato e sincronizzato), poi alfabetico per cognome
+function pOrd(a,b){const sn=n=>{const x=String(n||"").trim().split(/\s+/);return x.length>1?x.slice(1).join(" ")+" "+x[0]:x[0]||""};return (a.ord??1e9)-(b.ord??1e9)||sn(a.name).localeCompare(sn(b.name),"it")||a.id-b.id}
 const FBV=2,ymOf=d=>String(d||"0000-00").slice(0,7);
 const C={cfg:null,per:{},reg:{},rq:{},ov:{}},ARC={},ARCL={};
 const FPth=f=>new firebase.firestore.FieldPath(...f);
 function fbUnits(st){const U={},pr=new Map((st.people||[]).map(p=>[p.id,p.rep||0])),arc=new Set(st.archivi||[]);
  const put=(doc,f,v,meta)=>{U[doc+"#"+f.join("\u0001")]={doc,f,v,meta}};
  Object.keys(st).forEach(k=>{if(!["people","reqs","ov","ruleSets"].includes(k)&&st[k]!==undefined)put("turniferie/config",[k],st[k],null)});
- (st.people||[]).forEach((p,i)=>put("persone/"+(p.rep||0),["p",String(p.id)],Object.assign({},p,{_o:i}),{rep:p.rep||0}));
+ (st.people||[]).forEach((p,i)=>put("persone/"+(p.rep||0),["p",String(p.id)],p,{rep:p.rep||0}));
  (st.reqs||[]).forEach(r=>{const m=ymOf(r.days&&r.days[0]),y=+m.slice(0,4),rep=pr.get(r.pid)||0;put((arc.has(y)?"archivio_rq/":"rq/")+rep+"_"+m,["r",String(r.id)],r,{rep,anno:y,mese:m})});
  Object.entries(st.ov||{}).forEach(([k,v])=>{const i=k.indexOf("|"),m=ymOf(k.slice(i+1)),y=+m.slice(0,4),rep=pr.get(+k.slice(0,i))||0;put((arc.has(y)?"archivio_ov/":"ov/")+rep+"_"+m,["o",k],v,{rep,anno:y,mese:m})});
  (st.ruleSets||[]).forEach(s=>put("regole/"+s.id,["d"],s,null));
@@ -697,7 +699,7 @@ async function fbWrite(st){
 }
 const arcOf=(st,y)=>({reqs:(st.reqs||[]).filter(r=>+ymOf(r.days&&r.days[0]).slice(0,4)===y),ov:Object.fromEntries(Object.entries(st.ov||{}).filter(([k])=>+k.slice(k.indexOf("|")+1,k.indexOf("|")+5)===y))});
 function fbAssemble(){const st=JSON.parse(JSON.stringify(C.cfg||{}));
- st.people=Object.values(C.per).flatMap(d=>Object.values(d.p||{})).sort((a,b)=>(a._o??1e9)-(b._o??1e9)).map(p=>{delete p._o;return p});
+ st.people=Object.values(C.per).flatMap(d=>Object.values(d.p||{})).map(p=>{delete p._o;return p}).sort(pOrd);
  st.reqs=Object.values(C.rq).flatMap(d=>Object.values(d.r||{}));st.ov={};Object.values(C.ov).forEach(d=>Object.assign(st.ov,d.o||{}));
  const ay=new Set(st.archivi||[]);Object.entries(ARC).forEach(([y,a])=>{if(!ay.has(+y))return;st.reqs.push(...JSON.parse(JSON.stringify(a.reqs)));Object.assign(st.ov,a.ov)});
  st.reqs.sort((a,b)=>a.id-b.id);
@@ -1401,7 +1403,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     $("pfrep").onchange=e=>{window._pr=+e.target.value;render()};
     $("pflv").innerHTML=`<option value="0">Tutti i livelli</option>${S.levels.map((n,i)=>`<option value="${i+1}">${n}</option>`).join("")}`;$("pflv").value=String(window._pl||0);$("pflv").onchange=e=>{window._pl=+e.target.value;render()};
     $("ppl").querySelectorAll("[data-n]").forEach(i=>i.onchange=()=>{const v=i.value.trim();if(!v)return toast("Il nome non può essere vuoto");person(+i.dataset.n).name=v;save();fillWho();toast("Nome aggiornato")});
-    const mv=(id,dir)=>{const i=S.people.findIndex(p=>p.id===id),p0=S.people[i];let j=i+dir;while(j>=0&&j<S.people.length&&S.people[j].rep!==p0.rep)j+=dir;if(j<0||j>=S.people.length)return toast("È già "+(dir<0?"il primo":"l'ultimo")+" del reparto");S.people.splice(i,1);S.people.splice(j,0,p0);save();fillWho();if(SORT!=="man")toast("Ordine salvato: per vederlo scegli \"Ordine impostato\" sopra la griglia");render()};
+    const mv=(id,dir)=>{const p0=person(id),grp=S.people.filter(p=>p.rep===p0.rep).sort(pOrd),i=grp.indexOf(p0),j=i+dir;if(j<0||j>=grp.length)return toast("È già "+(dir<0?"il primo":"l'ultimo")+" del reparto");grp.splice(i,1);grp.splice(j,0,p0);grp.forEach((p,k)=>p.ord=k);S.people.sort(pOrd);save();fillWho();if(SORT!=="man")toast("Ordine salvato: per vederlo scegli \"Ordine impostato\" sopra la griglia");render()};
     $("ppl").querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>mv(+b.dataset.up,-1));$("ppl").querySelectorAll("[data-dn]").forEach(b=>b.onclick=()=>mv(+b.dataset.dn,1));
     $("ppl").querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>confirm2(b,()=>{const id=+b.dataset.rm;S.people=S.people.filter(p=>p.id!==id);S.reqs=S.reqs.filter(r=>r.pid!==id);for(const k in S.ov)if(k.startsWith(id+"|"))delete S.ov[k];save();fillWho();toast("Persona tolta");render()}));
     $("paddb").onclick=()=>{const v=$("padd").value.trim();if(!v)return toast("Scrivi il nome");{const rp=S.reparti.find(r=>r.id===(me?giroRep:(repF||(S.reparti[0]||{}).id)));if(isAutoRep(rp))return toast("Montastampi: le persone si gestiscono dalla scheda Regole > Individuali")}{const u0=userOf(v);let u=u0,k=2;while(S.people.some(x=>x.acc&&x.acc.user===u))u=u0+k++;S.people.push({id:Math.max(0,...S.people.map(p=>p.id))+1,name:v,prof:"standard",off:0,rep:me?giroRep:(repF||(S.reparti[0]||{}).id),acc:{user:u,must:true,tmp:PW0}});save();fillWho();toast(`Persona aggiunta · utente ${u}, password ${PW0}`)}render()};
