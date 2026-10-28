@@ -1,6 +1,6 @@
 // Service worker Turni e Ferie · Ergotech
 // Aumentare REV insieme ad APP_REV (index.html) e a version.json a ogni pubblicazione.
-const REV = 2;
+const REV = 3;
 const CACHE = "turni-ergotech-r" + REV;
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192-v2.png", "./icon-512-v2.png", "./apple-touch-icon-v2.png", "./favicon-v2.png"];
 
