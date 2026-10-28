@@ -425,7 +425,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.0.6",APP_REV_DATE="28/10/2026";
+const APP_REV="15.0.7",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -736,6 +736,8 @@ function fbApply(){if(!TFD.live)return;if(TFD.dirty||TFD.busy){TFD.needApply=tru
 // Anni archiviati: non caricati all'apertura, scaricati quando servono
 const oreOk=()=>{if(!me&&!ro)return true;if(me&&person(me))return true;return (S.oreSee||[]).includes("v"+ro)};
 // Le persone non abilitate in Impostazioni → Pagina Ore vedono solo le proprie ore
+// La scheda Anno non serve agli operatori (livello 1), salvo i pianificatori
+const annoOk=()=>!me||lvl(person(me))>=2||!!planR();
 const oreOwn=()=>!!me&&!(S.oreSee||[]).includes("p"+me);
 const isArc=y=>FBM&&TFD.kind==="firebase"&&(S.archivi||[]).includes(+y);
 async function ensureYear(y){y=+y;if(!isArc(y)||ARC[y])return;if(ARCL[y])return ARCL[y];
@@ -1137,9 +1139,9 @@ function mig2027(){if(S.g2027)return false;const rp=S.reparti.find(x=>/manutenz/
   if(!base||base.auto||base.uni||!(base.weeks||[]).length)return true;
   const n=JSON.parse(JSON.stringify(base));n.from=F;n.a=F;delete n.to;n.off={};for(const q of S.people.filter(q=>q.rep===rp.id&&inGrid(q)))n.off[q.id]=contIdx(q,n,F);
   vs.push(n);vs.sort((a,b)=>a.from<b.from?-1:1);delete S.drafts[rp.id];if(S.doff)S.doff[rp.id]={};return true}
-function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TFD.live)&&!S.g2027&&mig2027()){save();toast("Giro Manutenzione esteso al 2027 in continuità con novembre e dicembre")}syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOGGED)setTimeout(()=>{if(SCRT&&scrollToday())SCRT=false},0);{const ys=arcYearsNeeded(),b=$("arcban");if(b){const ay=(tab==="ore"?oy:cur.y);b.hidden=!isArc(ay);b.textContent=isArc(ay)?(ARC[ay]?"📦 Anno "+ay+" archiviato":"📦 Anno "+ay+" archiviato · caricamento…"):""}ys.forEach(y=>{if(!ARC[y])ensureYear(y)})}
+function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TFD.live)&&!S.g2027&&mig2027()){save();toast("Giro Manutenzione esteso al 2027 in continuità con novembre e dicembre")}syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(!annoOk()&&tab==="mese")tab="persone";if(SCRT&&LOGGED)setTimeout(()=>{if(SCRT&&scrollToday())SCRT=false},0);{const ys=arcYearsNeeded(),b=$("arcban");if(b){const ay=(tab==="ore"?oy:cur.y);b.hidden=!isArc(ay);b.textContent=isArc(ay)?(ARC[ay]?"📦 Anno "+ay+" archiviato":"📦 Anno "+ay+" archiviato · caricamento…"):""}ys.forEach(y=>{if(!ARC[y])ensureYear(y)})}
   const{y,m}=cur,n=new Date(y,m+1,0).getDate();
-  $("tabimp").hidden=$("tabturni").hidden=!canSet();document.querySelector('.tabs button[data-t="ore"]').hidden=!oreOk();$("repl").hidden=!!me;$("expb").hidden=!canExp();
+  $("tabimp").hidden=$("tabturni").hidden=!canSet();document.querySelector('.tabs button[data-t="ore"]').hidden=!oreOk();document.querySelector('.tabs button[data-t="mese"]').hidden=!annoOk();$("repl").hidden=!!me;$("expb").hidden=!canExp();
   document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===tab));
   ["persone","mese","ore","imp","turni"].forEach(t=>$("v-"+t).hidden=t!==tab);
   $("mlabel").textContent=new Date(y,m,1).toLocaleDateString("it-IT",{month:"long",year:"numeric"});
@@ -1240,8 +1242,8 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     $("yprev").onclick=()=>{oy--;render()};$("ynext").onclick=()=>{oy++;render()};
     if(oreOwn()){const p=person(me),t=totals(p,Y),f=v=>v?(+v.toFixed(2)).toLocaleString("it-IT"):"–",K=["fer","pend","mal","l104","ea","st","sw","ds","co","tr","cm"];
       $("otitle").textContent="Le mie ore";$("orereps").innerHTML="";
-      $("ore").innerHTML=`<tr><th class="name">Persona</th><th>Ferie e permessi (h)</th><th>In approvazione (h)</th><th>Malattia (gg)</th><th>104 (h)</th><th>Ingr./usc. anticipati (h)</th><th>Straordinari (h)</th><th>Smart working (gg)</th><th>Donazioni (gg)</th><th>Corsi (gg)</th><th>Trasferte (gg)</th><th>Congedo matr. (gg)</th></tr><tr><td class="name">${p.name}</td>${K.map(k=>`<td>${f(t[k])}</td>`).join("")}</tr>`;
-      $("onote").textContent="Ferie e permessi approvati nell'anno, quelli ancora da approvare, giorni di malattia, ore di 104 e le altre voci. Le ferie su sabato, domenica e festivi non sono conteggiate.";
+      $("ore").innerHTML=`<tr><th class="name">Persona</th><th>Ferie e permessi (h)</th><th>In approvazione (h)</th><th>Malattia (gg)</th><th>104 (h)</th><th>Ingr./usc. anticipati (h)</th><th>Straordinari (h)</th><th>Smart working (gg)</th><th>Donazioni (gg)</th><th>Corsi (gg)</th><th>Trasferte (gg)</th><th>Congedo matr. (gg)</th><th>Monte ferie (h)</th><th>Residuo (h)</th></tr><tr><td class="name">${p.name}</td>${K.map(k=>`<td>${f(t[k])}</td>`).join("")}${(()=>{const mo=(p.monte||{})[Y],res=mo==null?null:mo-t.fer;return `<td>${mo??"–"}</td><td class="${res<0?"neg":""}">${res==null?"–":res.toLocaleString("it-IT")}</td>`})()}</tr>`;
+      $("onote").textContent="Ferie e permessi approvati nell'anno, quelli ancora da approvare, giorni di malattia, ore di 104 e le altre voci. Residuo = monte ferie dell'anno meno ferie e permessi approvati. Le ferie su sabato, domenica e festivi non sono conteggiate.";
     }else{
     $("otitle").textContent="Ore dell'anno per reparto";
     const all=(me||ro?vis():S.people.filter(inGrid)),rps=repsOf(all);
