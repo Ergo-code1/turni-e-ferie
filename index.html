@@ -349,7 +349,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 <p class="muted" id="impnote" hidden></p>
 <details class="fold adm" id="fdrep"><summary><span>Reparti</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Ogni persona vede solo il proprio reparto.</p><div id="reps"></div><div class="row" style="margin-top:8px"><input id="radd" placeholder="Nome reparto" style="flex:1;min-width:0"><button id="raddb">Aggiungi reparto</button></div></div></details>
 <details class="fold" id="fdpers"><summary><span>Persone</span></summary><div class="fb"><div class="row" style="justify-content:flex-end;margin-bottom:6px"><div class="row"><input id="pfind" placeholder="Cerca nome" aria-label="Cerca persona" style="width:160px"><select id="pfrep" aria-label="Filtra ente"></select><select id="pflv" aria-label="Filtra livello"></select></div></div><p class="muted" style="margin:0 0 12px">Livello: chi approva le richieste e riceve gli avvisi è il livello subito sopra, nei reparti in comune. "Responsabile anche di": altri reparti che segue. "Può vedere": quali reparti consulta. Direttore e Dirigenza possono non avere reparto né piano turni. Ogni nuova persona riceve subito l'accesso con password 123 e al primo accesso deve sceglierne una sua.</p><div id="ppl"></div></div></details>
-<details class="fold adm" id="fdpaginaor"><summary><span>Pagina Ore</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Chi può vedere la pagina Ore, oltre all'amministratore. Ognuno vede i reparti a cui ha accesso.</p><div id="oresee"></div></div></details>
+<details class="fold adm" id="fdpaginaor"><summary><span>Pagina Ore</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Chi può vedere le ore dei reparti a cui ha accesso, oltre all'amministratore. Tutte le altre persone vedono solo le proprie ore.</p><div id="oresee"></div></div></details>
 <details class="fold adm" id="arccard"><summary><span>Archivio anni</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Gli anni archiviati non vengono più scaricati all'apertura: l'app resta veloce. Si consultano lo stesso (si caricano quando li apri) e si possono riportare tra i dati attivi.</p><div id="arcl"></div></div></details>
 <details class="fold adm" id="fdtipidiri"><summary><span>Tipi di richiesta</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Decidi quali richieste si possono fare e da chi. "Giornata intera" = niente scelta delle ore.</p><div id="tps"></div></div></details>
 <details class="fold adm" id="fdnomiuten"><summary><span>Nomi utente</span></summary><div class="fb"><p class="muted" style="margin-top:-6px">Nome utente = prime 3 lettere del nome + prime 3 del cognome. Password iniziale <code>123</code>, da cambiare al primo accesso. Tu entri come <code>admin</code>.</p><div id="codes"></div><div class="row" style="margin-top:8px" id="fbsr"><button id="fbsb">Attiva accessi Firebase</button><span class="muted" id="fbsn"></span></div></div></details>
@@ -425,7 +425,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.0.5",APP_REV_DATE="28/10/2026";
+const APP_REV="15.0.6",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -734,7 +734,9 @@ function fbApply(){if(!TFD.live)return;if(TFD.dirty||TFD.busy){TFD.needApply=tru
  if(LOGGED&&!validKey(LOGGED)){doLogout();return}
  fillWho();render();if(mg)save()}
 // Anni archiviati: non caricati all'apertura, scaricati quando servono
-const oreOk=()=>{if(!me&&!ro)return true;const k=me?"p"+me:"v"+ro;return (S.oreSee||[]).includes(k)};
+const oreOk=()=>{if(!me&&!ro)return true;if(me&&person(me))return true;return (S.oreSee||[]).includes("v"+ro)};
+// Le persone non abilitate in Impostazioni → Pagina Ore vedono solo le proprie ore
+const oreOwn=()=>!!me&&!(S.oreSee||[]).includes("p"+me);
 const isArc=y=>FBM&&TFD.kind==="firebase"&&(S.archivi||[]).includes(+y);
 async function ensureYear(y){y=+y;if(!isArc(y)||ARC[y])return;if(ARCL[y])return ARCL[y];
  ARCL[y]=(async()=>{const db=TFD.fb.db,a={reqs:[],ov:{}};
@@ -1236,6 +1238,11 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
   if(tab==="ore"){
     const Y=oy;$("ylab").textContent=Y;
     $("yprev").onclick=()=>{oy--;render()};$("ynext").onclick=()=>{oy++;render()};
+    if(oreOwn()){const p=person(me),t=totals(p,Y),f=v=>v?(+v.toFixed(2)).toLocaleString("it-IT"):"–",K=["fer","pend","mal","l104","ea","st","sw","ds","co","tr","cm"];
+      $("otitle").textContent="Le mie ore";$("orereps").innerHTML="";
+      $("ore").innerHTML=`<tr><th class="name">Persona</th><th>Ferie e permessi (h)</th><th>In approvazione (h)</th><th>Malattia (gg)</th><th>104 (h)</th><th>Ingr./usc. anticipati (h)</th><th>Straordinari (h)</th><th>Smart working (gg)</th><th>Donazioni (gg)</th><th>Corsi (gg)</th><th>Trasferte (gg)</th><th>Congedo matr. (gg)</th></tr><tr><td class="name">${p.name}</td>${K.map(k=>`<td>${f(t[k])}</td>`).join("")}</tr>`;
+      $("onote").textContent="Ferie e permessi approvati nell'anno, quelli ancora da approvare, giorni di malattia, ore di 104 e le altre voci. Le ferie su sabato, domenica e festivi non sono conteggiate.";
+    }else{
     $("otitle").textContent="Ore dell'anno per reparto";
     const all=(me||ro?vis():S.people.filter(inGrid)),rps=repsOf(all);
     let OR=null;try{OR=JSON.parse(localStorage.getItem("tf-orereps")||"null")}catch(e){}
@@ -1259,7 +1266,8 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     if(!nR)h+=`<tr><td colspan="14" class="muted">Scegli almeno un reparto.</td></tr>`;
     $("ore").innerHTML=h;
     $("ore").querySelectorAll("[data-mo]").forEach(i=>i.onchange=()=>{const p=person(+i.dataset.mo);p.monte=p.monte||{};if(i.value==="")delete p.monte[Y];else p.monte[Y]=+i.value;save();toast("Monte ferie salvato");render()});
-    $("onote").textContent="Residuo = monte ferie dell'anno meno ferie e permessi approvati. Questa pagina la vede solo chi è indicato in Impostazioni → Pagina Ore.";
+    $("onote").textContent="Residuo = monte ferie dell'anno meno ferie e permessi approvati. Le persone non indicate in Impostazioni → Pagina Ore vedono solo le proprie ore.";
+    }
   }
 
   if(tab==="imp"||tab==="turni"){
