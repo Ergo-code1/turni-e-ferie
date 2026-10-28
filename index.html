@@ -41,7 +41,7 @@ th{font-weight:500;color:var(--muted);font-size:11px;line-height:1.1}
 th.we{background:var(--we)}th.fest{background:var(--rc);color:var(--rcfg)}
 td.c{font-family:var(--mono);font-size:11px;font-weight:500;position:relative}
 .M{background:var(--m);color:var(--mfg)}.P{background:var(--p);color:var(--pfg)}.N{background:var(--n);color:var(--nfg)}.G{background:var(--g);color:var(--gfg)}
-.R{background:var(--we);color:var(--muted)}.MSV{background:var(--m);color:var(--mfg);box-shadow:inset 0 0 0 2px var(--svfg)}.PSV{background:var(--p);color:var(--pfg);box-shadow:inset 0 0 0 2px var(--svfg)}td.MSV,td.PSV{font-size:9.5px;letter-spacing:-.02em}.NR{background:var(--we);color:var(--accent);font-weight:700;box-shadow:inset 0 0 0 2px var(--accent)}.RC{background:var(--we);color:var(--muted)}.MA{background:var(--rc);color:var(--rcfg)}
+.R{background:var(--we);color:var(--muted)}.MSV{background:var(--m);color:var(--mfg)}.PSV{background:var(--p);color:var(--pfg)}td.MSV,td.PSV{font-size:9.5px;letter-spacing:-.02em}.NR{background:var(--we);color:var(--accent);font-weight:700;box-shadow:inset 0 0 0 2px var(--accent)}.RC{background:var(--we);color:var(--muted)}.MA{background:var(--rc);color:var(--rcfg)}
 .SW{background:var(--sw);color:var(--swfg)}.SV{background:var(--sv);color:var(--svfg)}.CM{background:var(--ma);color:var(--mafg)}.BD{background:var(--g);color:var(--gfg);box-shadow:inset 0 0 0 2px var(--hi)}.CO{background:var(--co);color:var(--cofg)}.TR{background:var(--tr);color:var(--trfg)}.DS{background:var(--ma);color:var(--mafg)}
 td.X{box-shadow:inset 0 -7px 0 var(--accent)}
 .chk{flex-direction:row;align-items:center;gap:6px}.chk input{width:auto}
@@ -428,7 +428,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.0.14",APP_REV_DATE="28/10/2026";
+const APP_REV="15.1.0",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
