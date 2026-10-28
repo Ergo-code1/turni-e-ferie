@@ -425,7 +425,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.0.4",APP_REV_DATE="28/10/2026";
+const APP_REV="15.0.5",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -468,7 +468,7 @@ if(S&&(S.ergoImp||0)<4){const keep=(S.people||[]).filter(p=>{const r=(S.reparti|
  if(!S.levels)S.levels=["Operatore","Responsabile","Direttore","Dirigenza"];S.accSeed=1;S.drafts={};S.doff={};S.log=[];S.ergoImp=4;mig=true}
 if(S&&!S.ferOk){(S.reqs||[]).forEach(r=>{if(r.tipo==="F"&&r.st==="wait"){r.st="ok";r.appr=r.appr||todayIso}});S.ferOk=1;mig=true}
 if(!S.reparti){S.reparti=[{id:1,name:"Reparto 1"}];S.people.forEach(p=>p.rep=1)}
-if(!S.viewers)S.viewers=[];
+if(!S.viewers)S.viewers=[];if(!S.hist||typeof S.hist!=="object")S.hist={};
 S.reparti.forEach(r=>{if(!r.versions)r.versions=JSON.parse(JSON.stringify(S.versions))});
 if(!S.drafts)S.drafts={};
 if(!S.levels){S.levels=["Operatore","Responsabile","Direttore","Dirigenza"];const nx=Math.max(0,...S.people.map(p=>p.id));const r1=(S.reparti[0]||{}).id,r2=(S.reparti[1]||S.reparti[0]||{}).id;
@@ -835,7 +835,15 @@ function rcDay(p,day){
   return !OFFC.includes(ws)&&ws!=="RC";
 }
 function plan(p,day){return rcDay(p,day)?"R":plan0(p,day)}
-const shift=(p,day)=>{const o=S.ov[p.id+"|"+day];return o==="RC"?"R":o||plan(p,day)};
+const hOf=k=>S.hist&&S.hist[k];
+const shift=(p,day)=>{const k=p.id+"|"+day,o=S.ov[k]||hOf(k);return o==="RC"?"R":o||plan(p,day)}
+// Niente effetti sul passato: prima di una modifica alla pianificazione (giro, profilo, regole) salva in S.hist
+// i turni dei giorni passati (da inizio anno precedente a ieri) che la modifica cambierebbe
+function freezePast(ppl,fn){const T=todayIso,st=iso(new Date().getFullYear()-1,0,1),old=new Map(),cur=p=>d=>rcDay(p,d)?"RC":plan0(p,d);
+  clrPC();for(const p of ppl){const c=cur(p);for(let d=st;d<T;d=add(d,1)){const k=p.id+"|"+d;if(S.ov[k]||hOf(k))continue;old.set(k,c(d))}}
+  fn();clrPC();let n=0;
+  for(const [k,v] of old){const i=k.indexOf("|"),p=person(+k.slice(0,i));if(!p)continue;const d=k.slice(i+1);if((rcDay(p,d)?"RC":plan0(p,d))!==v){S.hist[k]=v;n++}}
+  clrPC();return n};
 function conflicts(pid,days){const out=[],rp=person(pid).rep;if(!rp)return out;for(const d of days){const who=S.people.filter(p=>p.id!==pid&&p.rep===rp&&S.reqs.some(r=>r.pid===p.id&&r.st==="ok"&&r.days.includes(d))).map(p=>p.name.split(" ")[0]);if(who.length)out.push(fmt(d)+": "+who.join(", "))}return out}
 const reqOf=(pid,day)=>S.reqs.find(r=>r.pid===pid&&r.days.includes(day)&&r.st!=="no");
 const absent=(p,day)=>{const s=shift(p,day),r=reqOf(p.id,day);return ["MA","L","F","DS","CO","TR","CM"].includes(s)||(r&&r.st==="ok"&&(r.tipo==="DS"||r.tipo==="CO"||r.tipo==="TR"||(["F","L"].includes(r.tipo)&&r.h===8)))};
@@ -1002,7 +1010,7 @@ async function makePdf(r){
 }
 function cellOf(p,day){
   const s=shift(p,day),r=reqOf(p.id,day);
-  const isRC=s==="R"&&!S.fest.includes(day)&&(S.ov[p.id+"|"+day]==="RC"||(!S.ov[p.id+"|"+day]&&rcDay(p,day)));
+  const hk=p.id+"|"+day,ho=S.ov[hk]||hOf(hk),isRC=s==="R"&&!S.fest.includes(day)&&(ho==="RC"||(!ho&&rcDay(p,day)));
   let cls="c "+(isRC?"RC":s),txt=isRC?"RC":s==="R"?"·":(TXT[s]||s);
   if(r&&!["MA","RC"].includes(s)){
     if(r.tipo==="L"){cls="c L";txt=r.h===8?"104":r.h+"h"}
@@ -1121,7 +1129,13 @@ function gridPatch({pid,days}){const p=person(pid),g=$("grid");if(!p||!g)return;
     const [cls,txt]=gcell(p,day);td.className=cls;td.textContent=txt;td.removeAttribute("title");
     const ix=td.cellIndex;g.querySelectorAll(`tr.tot[data-r="${p.rep}"]`).forEach(tr=>{const c=gtot(grp,tr.dataset.k,day),cell=tr.cells[ix];if(cell){cell.className=(c?tr.dataset.k:"")+gms(day);cell.textContent=c||""}})}
 }
-function render(){clrPC();syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOGGED)setTimeout(()=>{if(SCRT&&scrollToday())SCRT=false},0);{const ys=arcYearsNeeded(),b=$("arcban");if(b){const ay=(tab==="ore"?oy:cur.y);b.hidden=!isArc(ay);b.textContent=isArc(ay)?(ARC[ay]?"📦 Anno "+ay+" archiviato":"📦 Anno "+ay+" archiviato · caricamento…"):""}ys.forEach(y=>{if(!ARC[y])ensureYear(y)})}
+// Una tantum: estende al 2027 il giro della Manutenzione in continuità con novembre e dicembre 2026
+function mig2027(){if(S.g2027)return false;const rp=S.reparti.find(x=>/manutenz/i.test(x.name));S.g2027=1;if(!rp)return true;
+  const vs=rp.versions||[];if(vs.some(v=>v.from>="2027-01-01"))return true;const F="2027-01-04",base=verOf(vs,"2026-12-28");
+  if(!base||base.auto||base.uni||!(base.weeks||[]).length)return true;
+  const n=JSON.parse(JSON.stringify(base));n.from=F;n.a=F;delete n.to;n.off={};for(const q of S.people.filter(q=>q.rep===rp.id&&inGrid(q)))n.off[q.id]=contIdx(q,n,F);
+  vs.push(n);vs.sort((a,b)=>a.from<b.from?-1:1);delete S.drafts[rp.id];if(S.doff)S.doff[rp.id]={};return true}
+function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TFD.live)&&!S.g2027&&mig2027()){save();toast("Giro Manutenzione esteso al 2027 in continuità con novembre e dicembre")}syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(SCRT&&LOGGED)setTimeout(()=>{if(SCRT&&scrollToday())SCRT=false},0);{const ys=arcYearsNeeded(),b=$("arcban");if(b){const ay=(tab==="ore"?oy:cur.y);b.hidden=!isArc(ay);b.textContent=isArc(ay)?(ARC[ay]?"📦 Anno "+ay+" archiviato":"📦 Anno "+ay+" archiviato · caricamento…"):""}ys.forEach(y=>{if(!ARC[y])ensureYear(y)})}
   const{y,m}=cur,n=new Date(y,m+1,0).getDate();
   $("tabimp").hidden=$("tabturni").hidden=!canSet();document.querySelector('.tabs button[data-t="ore"]').hidden=!oreOk();$("repl").hidden=!!me;$("expb").hidden=!canExp();
   document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===tab));
@@ -1260,7 +1274,7 @@ function render(){clrPC();syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(S
     const DOF=S.doff[giroRep]||(S.doff[giroRep]={});
     const offOf=p=>oo(v,p);
     $("vbar").hidden=JSON.stringify(DV)===JSON.stringify(GR.versions)&&!Object.keys(DOF).some(k=>DOF[k]!==(person(+k)||{}).off);
-    $("vapply").onclick=()=>{GR.versions=JSON.parse(JSON.stringify(DV));for(const k in DOF){const p=person(+k);if(p)p.off=DOF[k]}S.doff[giroRep]={};save();toast("Nuovo giro operativo per "+GR.name);render()};
+    $("vapply").onclick=()=>{freezePast(S.people.filter(q=>q.rep===giroRep),()=>{GR.versions=JSON.parse(JSON.stringify(DV));for(const k in DOF){const p=person(+k);if(p)p.off=DOF[k]}});S.doff[giroRep]={};save();toast("Nuovo giro operativo per "+GR.name+" (i giorni passati restano com'erano)");render()};
     $("vundo").onclick=()=>{delete S.drafts[giroRep];S.doff[giroRep]={};save();toast("Modifiche annullate");render()};
     const v=vs[vi];const base=todayIso<v.from?v.from:todayIso,wk0=Math.floor(Math.round((D(monday(base))-D(monday(v.a||v.from)))/864e5)/7);
     $("vers").innerHTML=vs.map((x,i)=>`<button aria-pressed="${i===vi}" data-v="${i}">Dal ${D(x.from).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"})}${x.to?" al "+D(x.to).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"}):" in poi"}${x.auto?" · automatica":x.uni?" · default "+x.t:""}</button>`).join("");
@@ -1329,8 +1343,8 @@ function render(){clrPC();syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(S
     $("ppl").querySelectorAll("[data-see]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.see),v=+c.value;let a=seeOf(p).filter(x=>x!==v);if(c.checked)a.push(v);p.see=a;save();toast("Visibilità aggiornata")});
     $("ppl").querySelectorAll("[data-ra2]").forEach(b=>b.onclick=()=>{const id=+b.dataset.ra2,p=person(id),f=$("rgf"+id).value,t=$("rgt"+id).value;if(t&&f&&t<f)return toast("La data finale è prima di quella iniziale");
       const r={dow:+$("rgd"+id).value,code:$("rgc"+id).value,from:f||todayIso};if(t)r.to=t;if(+$("rge"+id).value>1)r.every=+$("rge"+id).value;if($("rga"+id).checked)r.always=true;
-      p.rules=(p.rules||[]).concat(r);logIt(id,`regola: ogni ${DOWN[r.dow]} ${RULC[r.code]}`);save();toast("Regola aggiunta");render()});
-    $("ppl").querySelectorAll("[data-rd]").forEach(b=>b.onclick=()=>confirm2(b,()=>{const p=person(+b.dataset.rd);p.rules.splice(+b.dataset.ri,1);logIt(p.id,"regola speciale tolta");save();toast("Regola tolta");render()}));
+      freezePast([p],()=>{p.rules=(p.rules||[]).concat(r)});logIt(id,`regola: ogni ${DOWN[r.dow]} ${RULC[r.code]}`);save();toast("Regola aggiunta");render()});
+    $("ppl").querySelectorAll("[data-rd]").forEach(b=>b.onclick=()=>confirm2(b,()=>{const p=person(+b.dataset.rd);freezePast([p],()=>p.rules.splice(+b.dataset.ri,1));logIt(p.id,"regola speciale tolta");save();toast("Regola tolta");render()}));
     $("ppl").querySelectorAll("[data-mk]").forEach(b=>b.onclick=()=>{const p=person(+b.dataset.mk),u=userOf($("pu"+p.id).value),e=$("pe"+p.id).value.trim();if(!u)return toast("Scrivi il nome utente");if(S.people.some(x=>x.acc&&x.acc.user===u))return toast("Nome utente già usato: scegline un altro");p.acc=$("pnp"+p.id).checked?{user:u,nopw:true}:{user:u,must:true,tmp:PW0};if(e)p.acc.email=e;logIt(p.id,"accesso creato");save();toast("Accesso creato: comunica la password provvisoria");render()});
     $("ppl").querySelectorAll("[data-rs]").forEach(b=>b.onclick=()=>confirm2(b,()=>{const p=person(+b.dataset.rs);if(FBM){delete p.acc.uid;p.acc.must=true;logIt(p.id,"accesso da ricreare");save();toast("Ora elimina l'utente "+(p.acc.fbu||p.acc.user)+" in Firebase (Authentication → Utenti), poi premi Attiva accessi");render();return}p.acc.must=true;p.acc.tmp=genPw();logIt(p.id,"password reimpostata");save();toast("Nuova password provvisoria pronta");render()}));
     $("ppl").querySelectorAll("[data-np]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.np);if(c.checked){p.acc.nopw=true;delete p.acc.must;delete p.acc.tmp}else{delete p.acc.nopw;p.acc.must=true;p.acc.tmp=genPw()}logIt(p.id,c.checked?"accesso senza password":"accesso con password");save();toast(c.checked?"Ora entra senza password":"Password provvisoria creata");render()});
@@ -1338,7 +1352,7 @@ function render(){clrPC();syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(S
     $("ppl").querySelectorAll("[data-pian]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.pian);p.pian=c.checked;if(c.checked&&!(p.pianR||[]).length)p.pianR=p.rep?[p.rep]:[(S.reparti[0]||{}).id];save();fillWho();toast(c.checked?p.name+" ora è pianificatore":"Funzione pianificatore tolta a "+p.name);render()});
     $("ppl").querySelectorAll("[data-ppr]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.ppr),v=+c.value;let a=(pianOf(p)||[]).filter(x=>x!==v);if(c.checked)a.push(v);if(!a.length){c.checked=true;return toast("Lascia almeno un ente")}p.pianR=a;save();toast("Enti pianificati aggiornati")});
     $("ppl").querySelectorAll("[data-sw]").forEach(c=>c.onchange=()=>{person(+c.dataset.sw).sw=c.checked;save();toast(c.checked?"Smart working abilitato":"Smart working disabilitato")});
-    $("ppl").querySelectorAll("select[data-f]").forEach(s=>s.onchange=()=>{const p=person(+s.dataset.p);p[s.dataset.f]=s.dataset.f==="prof"?s.value:+s.value;if(lvl(p)<3){if(!p.rep)p.rep=(S.reparti[0]||{}).id;if(p.prof==="none")p.prof="giornata"}if(s.dataset.f==="rep"&&p.reps)p.reps=p.reps.filter(x=>x!==p.rep);save();fillWho();toast("Profilo aggiornato");render()});
+    $("ppl").querySelectorAll("select[data-f]").forEach(s=>s.onchange=()=>{const p=person(+s.dataset.p);freezePast([p],()=>{p[s.dataset.f]=s.dataset.f==="prof"?s.value:+s.value;if(lvl(p)<3){if(!p.rep)p.rep=(S.reparti[0]||{}).id;if(p.prof==="none")p.prof="giornata"}});if(s.dataset.f==="rep"&&p.reps)p.reps=p.reps.filter(x=>x!==p.rep);save();fillWho();toast("Profilo aggiornato");render()});
     $("reps").innerHTML=S.reparti.map(r=>{const n=S.people.filter(p=>p.rep===r.id).length;return `<div class="row" style="flex-wrap:nowrap;padding:4px 0"><input id="rn${r.id}" data-rn="${r.id}" value="${r.name.replace(/"/g,"&quot;")}" aria-label="Nome reparto" style="flex:1;min-width:0"><span class="muted">${n} pers.</span>${n||isAutoRep(r)?"":`<button data-rr="${r.id}" aria-label="Elimina reparto">✕</button>`}</div>`}).join("");
     $("reps").querySelectorAll("[data-rn]").forEach(i=>i.onchange=()=>{const v=i.value.trim();if(!v)return toast("Il nome non può essere vuoto");S.reparti.find(r=>r.id==i.dataset.rn).name=v;save();fillWho();toast("Reparto rinominato");render()});
     $("reps").querySelectorAll("[data-rr]").forEach(b=>b.onclick=()=>{S.reparti=S.reparti.filter(r=>r.id!=b.dataset.rr);save();fillWho();toast("Reparto eliminato");render()});
