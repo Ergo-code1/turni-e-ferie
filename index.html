@@ -1167,7 +1167,7 @@ async function checkUpdate(){if(!/^https?:$/.test(location.protocol))return;try{
 checkUpdate();setInterval(checkUpdate,15*60*1000);document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkUpdate()});
 let SCRT=true;
 function scrollToday(){const th=$("tdh"),sc=$("grid")&&$("grid").parentElement;if(!th||!sc||tab!=="persone")return false;const nm=$("grid").querySelector("th.name");sc.scrollLeft=Math.max(0,th.offsetLeft-(nm?nm.offsetWidth:0)-4);return true}
-let GPATCH=null,gRef=null; // gRef: data scelta per la vista del giro per persona
+let GPATCH=null,gRef=null,gChk=null; // gRef: data scelta per la vista del giro per persona
 // Mese sempre visibile nella colonna Persona: quello del primo giorno visibile a sinistra
 function gMon(){const g=$("grid"),el=$("gmon");if(!g||!el)return;const sc=g.parentElement,nm=g.querySelector("th.name"),x=sc.scrollLeft+(nm?nm.offsetWidth:0)+2;
  let d=null;for(const th of g.querySelectorAll("th[data-hd]")){d=th.dataset.hd;if(th.offsetLeft+th.offsetWidth>x)break}
@@ -1385,13 +1385,14 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
        if(p.prof==="giornata"||p.prof==="giornataSV")return `<div class="gprow"><span class="gpn">${p.name}</span><span class="muted" style="grid-column:2/-1">Profilo ${PROF[p.prof]}: lavora lun–ven 8–17 e non segue il giro. Per farla ruotare cambia il profilo in "Turno standard" qui a fianco.</span></div>`;
        return `<div class="gprow"><span class="gpn">${p.name}</span><label class="gpo">${refLab}<select id="go${p.id}" data-go="${p.id}">${opt(String(cur),Object.fromEntries(v.weeks.map((_,i)=>[i,"S"+(i+1)])))}</select></label><div class="gws">${cells}</div></div>`}).join(""):'<p class="muted">Nessuna persona a turni in questo reparto.</p>';
      {// Verifica semplice: nella settimana della data scelta, i turni effettivi rispettano il giro?
-      const days=[0,1,2,3,4,5,6].map(k=>add(m0,k)),pp=grp.filter(p=>p.prof!=="giornata"&&p.prof!=="giornataSV"&&p.prof!=="none"&&inGrid(p));let nb=0;
-      const exp=(p,day)=>{if(S.fest.includes(day))return "R";const r=wkOf(p,m0);if(!r)return null;return applyRules(p,day,expW(p,r.w,D(day).getDay()))};
+      const c0=monday(gChk||todayIso),days=[0,1,2,3,4,5,6].map(k=>add(c0,k)),pp=grp.filter(p=>p.prof!=="giornata"&&p.prof!=="giornataSV"&&p.prof!=="none"&&inGrid(p));let nb=0;
+      const exp=(p,day)=>{if(S.fest.includes(day))return "R";const r=wkOf(p,c0);if(!r)return null;return applyRules(p,day,expW(p,r.w,D(day).getDay()))};
       const rows=pp.map(p=>`<tr><td class="name">${esc(p.name)}</td>${days.map(day=>{const a=shift(p,day),e=exp(p,day),ab=OFFC.includes(a)&&a!=="R"||absent(p,day),rc=a==="R"&&!S.ov[p.id+"|"+day]&&!hOf(p.id+"|"+day)&&rcDay(p,day),ok=e==null||ab||rc||a===e;if(!ok)nb++;
         return `<td class="c ${a}${ok?"":" bad"}" title="${fmt(day)} · effettivo: ${LAB[a]||a}${e?" · giro: "+(LAB[e]||e):""}">${TXT[a]||(a==="R"?"·":a)}${ok?"":`<small>giro ${e==="R"?"riposo":e}</small>`}</td>`}).join("")}</tr>`).join("");
-      $("gchk").innerHTML=`<strong>Verifica giro · settimana del ${fmt(m0)}</strong> <span class="${nb?"":"muted"}" style="${nb?"color:#d33;font-weight:600":""}">${nb?nb+(nb===1?" giorno non rispetta":" giorni non rispettano")+" il giro":"✓ tutti rispettano il giro"}</span>
+      $("gchk").innerHTML=`<div class="row" style="align-items:flex-end;gap:10px"><strong>Verifica giro</strong><label>Data da verificare<input type="date" id="gckd" value="${gChk||todayIso}"></label><span class="muted" style="padding-bottom:8px">settimana dal ${fmt(c0)} al ${fmt(add(c0,6))}</span></div><span class="${nb?"":"muted"}" style="${nb?"color:#d33;font-weight:600":""}">${nb?nb+(nb===1?" giorno non rispetta":" giorni non rispettano")+" il giro":"✓ tutti rispettano il giro"}</span>
        <div class="scroll" style="margin-top:6px"><table class="gck"><tr><th class="name"></th>${days.map(d=>`<th>${"DLMMGVS"[D(d).getDay()]}<br>${+d.slice(8)}</th>`).join("")}</tr>${rows}</table></div>
-       <p class="muted" style="margin-top:4px">Turni effettivi (con modifiche a mano) confrontati con il giro in bozza. Ferie, assenze e riposi compensativi non contano; le caselle col bordo rosso indicano il turno previsto dal giro.</p>`}
+       <p class="muted" style="margin-top:4px">Scegli una data qualsiasi: viene controllata la sua settimana. Turni effettivi (con modifiche a mano) confrontati con il giro in bozza. Ferie, assenze e riposi compensativi non contano; le caselle col bordo rosso indicano il turno previsto dal giro.</p>`;
+      $("gckd").onchange=e=>{gChk=e.target.value||null;render()}}
      $("gppl").querySelectorAll("[data-go]").forEach(sl=>sl.onchange=()=>{const V=edV();if(!V)return;V.off=V.off||{};V.off[+sl.dataset.go]=(((+sl.value-wkR)%W)+W)%W;save();toast("Modifica in bozza: premi Rendi operativo");render()});}
     const maxW=Math.max(...S.reparti.flatMap(r=>r.versions.map(x=>(x.weeks||[]).length)),...DV.map(x=>(x.weeks||[]).length));
     const pq=(window._pq||"").toLowerCase(),pr=window._pr||0;
