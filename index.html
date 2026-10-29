@@ -400,7 +400,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 <details class="fold" id="acgiro"><summary><span>Giro turni</span></summary><div class="fb">
       <label style="margin-bottom:10px">Reparto<select id="grep"></select></label>
       <p class="muted" style="margin-top:-6px">Ogni persona fa una settimana dopo l'altra: S1, S2, S3… e dopo l'ultima ricomincia da S1. Ogni versione vale dalla data di inizio alla data di fine; senza data di fine vale da lì in poi. Se modifichi una versione già iniziata, la modifica parte da oggi e il passato resta com'era. Le modifiche valgono solo dopo "Rendi operativo".</p>
-      <div class="vbar" id="vbar" hidden><strong style="flex:1;min-width:160px">Modifiche al giro non ancora operative</strong><button id="vundo">Annulla modifiche</button><button class="pri" id="vapply">Rendi operativo</button></div>
+      <div class="vbar" id="vbar" hidden><strong style="flex:1;min-width:160px">Modifiche al giro non ancora operative</strong><button id="vundo">Annulla modifiche</button><button class="pri" id="vapply">Rendi operativo</button></div><div id="gundo" hidden style="margin:6px 0"><button id="gundob"></button> <span class="muted" id="gundot"></span></div>
       <div class="vers" id="vers"></div>
       <div class="row" style="margin-bottom:10px"><label>Valida dal<input type="date" id="vfrom"></label><label>Fino al<input type="date" id="vto"></label><button id="vtoclr" style="align-self:flex-end">Togli fine (in poi)</button><button id="vdel" style="align-self:flex-end">Elimina versione</button></div><label style="margin-bottom:10px">Tipo<select id="vtype"><option value="giro">Giro a settimane</option><option value="uni">Turno default: tutto il reparto fa sempre lo stesso turno</option><option value="auto">Automatica a regole</option></select></label><div id="uni"></div>
       <div id="weeks"></div><button id="addwk" style="margin-top:8px">Aggiungi settimana</button>
@@ -428,7 +428,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.2.1",APP_REV_DATE="28/10/2026";
+const APP_REV="15.2.2",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -879,7 +879,7 @@ const shift=(p,day)=>{const k=p.id+"|"+day,o=S.ov[k]||hOf(k);return o==="RC"?"R"
 // Niente effetti sul passato: prima di una modifica alla pianificazione (giro, profilo, regole) salva in S.hist
 // i turni dei giorni passati (da inizio anno precedente a ieri) che la modifica cambierebbe
 // Annulla: prima di ogni modifica su una sola persona salvo com'era (piano, giro, regole, cambi, storico dei giorni passati)
-const UNDO={},UF=["prof","off","rules","chg","in","rep"];
+const UNDO={},GUNDO={},UF=["prof","off","rules","chg","in","rep"];
 function snapP(p){const pre=p.id+"|",h={};for(const k in S.hist)if(k.startsWith(pre))h[k]=S.hist[k];(UNDO[p.id]=UNDO[p.id]||[]).push({f:JSON.parse(JSON.stringify(UF.reduce((o,k)=>(o[k]=p[k],o),{}))),h,t:Date.now()});if(UNDO[p.id].length>10)UNDO[p.id].shift()}
 function undoP(id){const p=person(id),st=UNDO[id];if(!p||!st||!st.length)return;const u=st.pop(),pre=id+"|";
  UF.forEach(k=>{if(u.f[k]===undefined)delete p[k];else p[k]=u.f[k]});for(const k of Object.keys(S.hist))if(k.startsWith(pre)&&!(k in u.h))delete S.hist[k];Object.assign(S.hist,u.h);clrPC();
@@ -1370,7 +1370,12 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     const DOF=S.doff[giroRep]||(S.doff[giroRep]={});
     const offOf=p=>oo(v,p);
     $("vbar").hidden=JSON.stringify(DV)===JSON.stringify(GR.versions)&&!Object.keys(DOF).some(k=>DOF[k]!==(person(+k)||{}).off);
-    $("vapply").onclick=()=>{freezePast(S.people.filter(q=>q.rep===giroRep),()=>{GR.versions=JSON.parse(JSON.stringify(DV));for(const k in DOF){const p=person(+k);if(p)p.off=DOF[k]}});S.doff[giroRep]={};save();toast("Nuovo giro operativo per "+GR.name+" (i giorni passati restano com'erano)");render()};
+    {const st=GUNDO[giroRep]||[];$("gundo").hidden=!st.length;if(st.length){const u=st[st.length-1];$("gundob").textContent=`↶ Annulla l'ultimo "Rendi operativo" (${st.length})`;$("gundot").textContent="fatto alle "+new Date(u.t).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})+": il giro di "+GR.name+" e i turni delle persone tornano com'erano prima";
+      $("gundob").onclick=()=>confirm2($("gundob"),()=>{const u=st.pop();GR.versions=u.v;for(const [id,o] of Object.entries(u.p)){const p=person(+id);if(!p)continue;["off","chg"].forEach(k=>{if(o[k]===undefined)delete p[k];else p[k]=o[k]})}
+        for(const k of Object.keys(S.hist)){const id=+k.slice(0,k.indexOf("|"));if(id in u.p&&!(k in u.h))delete S.hist[k]}Object.assign(S.hist,u.h);delete S.drafts[giroRep];S.doff[giroRep]={};clrPC();save();toast("Giro di "+GR.name+" tornato com'era");render()})}}
+    $("vapply").onclick=()=>{{const pp=S.people.filter(q=>q.rep===giroRep),h={};for(const k in S.hist){const id=+k.slice(0,k.indexOf("|"));if(pp.some(q=>q.id===id))h[k]=S.hist[k]}
+      (GUNDO[giroRep]=GUNDO[giroRep]||[]).push({t:Date.now(),v:JSON.parse(JSON.stringify(GR.versions)),p:Object.fromEntries(pp.map(q=>[q.id,JSON.parse(JSON.stringify({off:q.off,chg:q.chg}))])),h});if(GUNDO[giroRep].length>10)GUNDO[giroRep].shift()}
+      freezePast(S.people.filter(q=>q.rep===giroRep),()=>{GR.versions=JSON.parse(JSON.stringify(DV));for(const k in DOF){const p=person(+k);if(p)p.off=DOF[k]}});S.doff[giroRep]={};save();toast("Nuovo giro operativo per "+GR.name+" (i giorni passati restano com'erano)");render()};
     $("vundo").onclick=()=>{delete S.drafts[giroRep];S.doff[giroRep]={};save();toast("Modifiche annullate");render()};
     const v=vs[vi];const base=todayIso<v.from?v.from:todayIso,wk0=Math.floor(Math.round((D(monday(base))-D(monday(v.a||v.from)))/864e5)/7);
     $("vers").innerHTML=vs.map((x,i)=>`<button aria-pressed="${i===vi}" data-v="${i}">Dal ${D(x.from).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"})}${x.to?" al "+D(x.to).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"}):" in poi"}${x.auto?" · automatica":x.uni?" · default "+x.t:""}</button>`).join("");
