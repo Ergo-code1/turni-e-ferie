@@ -187,7 +187,7 @@ tr.rep td{padding:10px 0 0!important;text-align:left}
 .gpo{flex-direction:row;align-items:center;gap:0}.gpo select{width:100%}.gpo{font-size:11px;gap:6px}
 .gws{display:flex;gap:3px;overflow-x:auto}
 .gw{flex:none;display:flex;flex-direction:column;align-items:center;min-width:34px;padding:3px 0;border-radius:6px;font-size:10px;font-family:var(--mono)}
-.gw b{font-size:12px}.gck{border-collapse:collapse;font-size:12px}.gck th,.gck td{padding:3px 4px;text-align:center;white-space:nowrap}.gck td.name,.gck th.name{text-align:left}.gck td.c{font-family:var(--mono);border-radius:4px}.gck td.bad{outline:2px solid #d33;outline-offset:-2px}.gck small{display:block;font-size:9px;color:#d33}.gw i{font-style:normal;font-size:8.5px;opacity:.8}.gw.past{opacity:.55}.gwd{font-size:9px;color:var(--muted)}.gw.now{outline:2px solid var(--hi);outline-offset:-1px}
+.gw b{font-size:12px}.acc .pf label,#ppl .pf label{min-width:0}.acc .pf select,.acc .pf input,#ppl .pf select,#ppl .pf input{width:100%;min-width:0;box-sizing:border-box}.gck{border-collapse:collapse;font-size:12px}.gck th,.gck td{padding:3px 4px;text-align:center;white-space:nowrap}.gck td.name,.gck th.name{text-align:left}.gck td.c{font-family:var(--mono);border-radius:4px}.gck td.bad{outline:2px solid #d33;outline-offset:-2px}.gck small{display:block;font-size:9px;color:#d33}.gw i{font-style:normal;font-size:8.5px;opacity:.8}.gw.past{opacity:.55}.gwd{font-size:9px;color:var(--muted)}.gw.now{outline:2px solid var(--hi);outline-offset:-1px}
 @media (max-width:560px){.gprow{grid-template-columns:1fr 90px}.gws{grid-column:1/-1}}
 .notif{border-color:color-mix(in srgb,var(--hi) 55%,var(--line))}
 .notif h2::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--hi);margin-right:8px;vertical-align:2px}
@@ -428,7 +428,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.1.4",APP_REV_DATE="28/10/2026";
+const APP_REV="15.2.0",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -815,9 +815,16 @@ const D=s=>new Date(s+"T12:00");
 const add=(s,n)=>{const x=D(s);x.setDate(x.getDate()+n);return iso(x.getFullYear(),x.getMonth(),x.getDate())};
 const monday=s=>{const x=D(s);return add(s,-((x.getDay()+6)%7))};
 // Turno atteso per una persona in una settimana del giro (stessa logica di plan0b)
-function expW(p,w,dow){const end=dow===6?(w.sab||"R"):dow===0?(w.dom||"R"):null;
-  if(p.prof==="giornata")return end?"R":"G";if(p.prof==="giornataSV")return end?"R":"SV";if(p.prof==="standard")return end||w.t;
-  if(!end)return w.t==="N"?"N":w.t==="SV"?"SV":"G";return p.prof==="dnw"?end:"R"}
+// Cambi per singola persona con data di inizio (p.chg): piano turni e/o settimana del giro da cui ripartire
+function chgAt(p,day){const c=p.chg;if(!c||!c.length)return null;let r=null;for(const x of c)if(x.from<=day&&(!r||x.from>r.from))r=x;return r}
+function profAt(p,day){if(!day)return p.prof;const c=chgAt(p,day);return c&&c.prof?c.prof:p.prof}
+const wkIx=(v,day)=>Math.floor(Math.round((D(monday(day))-D(monday(v.a||v.from)))/864e5)/7);
+function offAt(p,v,day){let c=null;if(day)for(const x of p.chg||[])if(x.s!=null&&x.from<=day&&(!c||x.from>c.from))c=x;if(c&&c.s!=null&&!v.uni&&!v.auto&&(v.weeks||[]).length&&c.from>=v.from){const L=v.weeks.length;return(((c.s-wkIx(v,c.from))%L)+L)%L}return oo(v,p)}
+// Settimana del giro (indice) che fa la persona nella settimana di "day"
+function giroIx(p,day){const v=verOf(versOf(p),day);if(!v||v.uni||v.auto||!(v.weeks||[]).length)return null;const L=v.weeks.length;return(((wkIx(v,day)+offAt(p,v,day))%L)+L)%L}
+function expW(p,w,dow,day){const pf=profAt(p,day),end=dow===6?(w.sab||"R"):dow===0?(w.dom||"R"):null;
+  if(pf==="giornata")return end?"R":"G";if(pf==="giornataSV")return end?"R":"SV";if(pf==="standard")return end||w.t;
+  if(!end)return w.t==="N"?"N":w.t==="SV"?"SV":"G";return pf==="dnw"?end:"R"}
 // Settimana del giro da cui ripartire il "dal" f: riconosce dai turni reali (comprese le modifiche a mano)
 // delle 6 settimane prima quale settimana del giro stava facendo la persona, e riparte dalla successiva
 function contIdx(p,v,f){const W=v.weeks,L=W.length,m0=monday(f),T=["M","P","N","G","SV","R"];
@@ -827,7 +834,7 @@ function contIdx(p,v,f){const W=v.weeks,L=W.length,m0=monday(f),T=["M","P","N","
   for(let i=0;i<L;i++){let sc=0;
     for(let k=1;k<=6;k++){const w=W[((i-k)%L+L)%L],m=add(m0,-7*k);
       for(let d=0;d<7;d++){const day=add(m,d);if(S.fest.includes(day))continue;const a=shift(p,day);if(!T.includes(a))continue;
-        if(a===expW(p,w,D(day).getDay()))sc+=1}}
+        if(a===expW(p,w,D(day).getDay(),day))sc+=1}}
     if(sc>bs||(sc===bs&&i===base)){bs=sc;best=i}}
   return best}
 const verOf=(vs,day)=>{const o=[...vs].sort((a,b)=>a.from<b.from?-1:1);return o.filter(v=>v.from<=day&&(!v.to||day<=v.to)).pop()||o.filter(v=>v.from<=day&&!v.to).pop()||o[0]};
@@ -841,21 +848,22 @@ function applyRules(p,day,s){const rs=p.rules;if(!rs||!rs.length)return s;const 
  for(const r of rs){if(r.dow!==dow||(r.from&&day<r.from)||(r.to&&day>r.to))continue;if(!r.always&&s==="R")continue;if(r.every>1){const k=Math.round((D(monday(day))-D(monday(r.from||"2026-01-05")))/6048e5);if(((k%r.every)+r.every)%r.every)continue}return r.code}return s}
 const P0C=new Map();const clrPC=()=>P0C.clear();
 function plan0(p,day){const ck=p.id+"|"+day;let v=P0C.get(ck);if(v===undefined){v=plan0x(p,day);P0C.set(ck,v)}return v}
-function plan0x(p,day){const s0=plan0b(p,day);return (p.prof==="none"||!p.rep||S.fest.includes(day))?s0:applyRules(p,day,s0)}
+function plan0x(p,day){const s0=plan0b(p,day);return (profAt(p,day)==="none"||!p.rep||(p.in&&day<p.in)||S.fest.includes(day))?s0:applyRules(p,day,s0)}
 function plan0b(p,day){
-  if(p.prof==="none"||!p.rep)return "R";
+  const pf=profAt(p,day);
+  if(pf==="none"||!p.rep||(p.in&&day<p.in))return "R";
   if(S.fest.includes(day))return "R";
   const v=verOf(versOf(p),day),dow=D(day).getDay();
   if(v.auto)return "R";
   if(v.uni)return dow===6?(v.sab||"R"):dow===0?(v.dom||"R"):v.t;
-  const wk=Math.floor(Math.round((D(monday(day))-D(monday(v.a||v.from)))/864e5)/7);
-  const L=v.weeks.length,w=v.weeks[((wk+oo(v,p))%L+L)%L];
+  const wk=wkIx(v,day);
+  const L=v.weeks.length,w=v.weeks[((wk+offAt(p,v,day))%L+L)%L];
   const end=dow===6?(w.sab||"R"):dow===0?(w.dom||"R"):null;
-  if(p.prof==="giornata")return end?"R":"G";
-  if(p.prof==="giornataSV")return end?"R":"SV";
-  if(p.prof==="standard")return end||w.t;
+  if(pf==="giornata")return end?"R":"G";
+  if(pf==="giornataSV")return end?"R":"SV";
+  if(pf==="standard")return end||w.t;
   if(!end)return w.t==="N"?"N":w.t==="SV"?"SV":"G";
-  return p.prof==="dnw"?end:"R";
+  return pf==="dnw"?end:"R";
 }
 const OFFC=["R","MA","L","F","DS","CM"];
 // Riposo compensativo: sabato lavorato -> venerdì prima; domenica lavorata -> lunedì dopo
@@ -900,6 +908,15 @@ const isAppr=(pid)=>!ro&&(!me||approvers(person(pid)).some(x=>x.id===me));
 const PW0="123";
 const genPw=()=>"Turni-"+String(Math.floor(1000+Math.random()*9000));
 const userOf=n=>n.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,".").replace(/^\.|\.$/g,"");
+function giroOpts(p,day){const v=verOf(versOf(p),day);return v&&!v.uni&&!v.auto?(v.weeks||[]).map((w,i)=>[i,"S"+(i+1)+" · "+(LAB[w.t]||w.t)+(w.sab||w.dom?" + WE":"")]):[]}
+function chgHtml(p){if(!p.rep||lvl(p)>=3&&profAt(p,todayIso)==="none"&&!(p.chg||[]).length)return "";const f=d=>D(d).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"}),cs=[...(p.chg||[])].sort((a,b)=>a.from<b.from?-1:1);
+ const d0=(window._chd||{})[p.id]||todayIso,go=giroOpts(p,d0),cur=giroIx(p,d0),col=S.people.filter(q=>q.id!==p.id&&q.rep===p.rep&&inGrid(q)&&giroIx(q,d0)!=null);
+ return `<div class="acc"><span class="cl">Cambio giro / piano da una data (solo questa persona)</span>${cs.length?cs.map(c=>`<div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span>Dal <strong>${f(c.from)}</strong>${c.ingr?" (ingresso)":""}${c.prof?" · "+(PROF[c.prof]||PROF0[c.prof]||c.prof):""}${c.s!=null?" · giro S"+(c.s+1):""}${c.seg?` <span class="muted">come ${esc(c.seg)}</span>`:""}</span><button class="ghost" data-cd="${p.id}" data-cf="${c.from}" aria-label="Togli cambio">✕</button></div>`).join(""):'<span class="muted">Nessun cambio programmato. Il giro e il piano valgono come impostati sopra.</span>'}${p.in?`<span class="muted">In forza dal ${f(p.in)}.</span>`:""}
+ <div class="pf"><label>Dal<input type="date" id="chd${p.id}" data-chd="${p.id}" value="${d0}"></label><label>Piano turni<select id="chp${p.id}">${opt(profAt(p,d0),lvl(p)>=3?{...PROF0,...PROF}:PROF)}</select></label>
+ <label>Settimana del giro in quella settimana<select id="chs${p.id}">${go.length?go.map(([i,l])=>`<option value="${i}"${i===cur?" selected":""}>${l}</option>`).join(""):'<option value="">—</option>'}</select></label>
+ <label>Oppure segui il giro di<select id="chc${p.id}"><option value="">—</option>${col.map(q=>`<option value="${q.id}">${esc(q.name)} (S${giroIx(q,d0)+1})</option>`).join("")}</select></label></div>
+ <span class="muted">Ora fa S${cur!=null?cur+1:"–"} nella settimana del ${fmt(monday(d0))}. Dalla settimana scelta prosegue con le successive. I giorni prima della data non cambiano.</span>
+ <button class="pri" data-cha="${p.id}">Aggiorna solo questa persona</button></div>`}
 function ruleHtml(p){if(!inGrid(p))return "";const rs=p.rules||[],f=d=>D(d).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"});
  return `<div class="acc"><span class="cl">Regole speciali</span>${rs.length?rs.map((r,i)=>`<div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span>Ogni ${r.every>1?r.every+"ª settimana di ":""}${DOWN[r.dow]} → <strong>${RULC[r.code]||r.code}</strong>${r.always?" (anche se di riposo)":""}<span class="muted"> · ${r.from?"dal "+f(r.from):""}${r.to?" al "+f(r.to):" in poi"}</span></span><button class="ghost" data-rd="${p.id}" data-ri="${i}" aria-label="Togli regola">✕</button></div>`).join(""):'<span class="muted">Nessuna. Esempio: tutti i lunedì mattina, anche se il giro dice altro.</span>'}
  <div class="pf"><label>Giorno<select id="rgd${p.id}">${[1,2,3,4,5,6,0].map(k=>`<option value="${k}">${DOWN[k]}</option>`).join("")}</select></label><label>Turno<select id="rgc${p.id}">${Object.entries(RULC).map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></label>
@@ -1378,7 +1395,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     {const W=(v.weeks||[]).length;
      const grp=v.auto?[]:S.people.filter(p=>p.rep===giroRep);
      const ref=gRef||base,m0=monday(ref);const inV=ref>=v.from&&(!v.to||ref<=v.to),wkR=inV?Math.floor(Math.round((D(m0)-D(monday(v.a||v.from)))/864e5)/7):wk0,refLab=inV?"Sett. del "+(+m0.slice(8))+"/"+(+m0.slice(5,7)):"Questa sett.";
-     const wkOf=(p,m)=>{const x=verOf(DV,m);if(!x||x.auto)return null;if(x.uni)return {i:-1,w:{t:x.t,sab:x.sab,dom:x.dom}};const L=x.weeks.length;if(!L)return null;const n=Math.floor(Math.round((D(m)-D(monday(x.a||x.from)))/864e5)/7),i=((n+oo(x,p))%L+L)%L;return {i,w:x.weeks[i]}};
+     const wkOf=(p,m)=>{const x=verOf(DV,m);if(!x||x.auto)return null;if(x.uni)return {i:-1,w:{t:x.t,sab:x.sab,dom:x.dom}};const L=x.weeks.length;if(!L)return null;const n=wkIx(x,m),i=((n+offAt(p,x,m))%L+L)%L;return {i,w:x.weeks[i]}};
      $("gpnote").textContent=`Settimane dal ${fmt(add(m0,-28))} al ${fmt(add(m0,34))}: evidenziata la settimana del ${fmt(m0)} (data di inizio scelta sopra). La tendina accanto al nome indica quale settimana del giro (S1, S2…) fa la persona ${inV?"nella settimana evidenziata":"questa settimana"}: se la cambi, tutto il suo giro si sposta di conseguenza e dalla settimana dopo prosegue con la successiva.`;
      $("gppl").innerHTML=grp.length?grp.map(p=>{const cur=(((wkR+offOf(p))%W)+W)%W;let cells="";for(let k=-4;k<=4;k++){const m=add(m0,k*7),r=wkOf(p,m);if(!r){cells+=`<span class="gw" title="Settimana del ${fmt(m)}">–<b>·</b><i class="gwd">${+m.slice(8)}/${+m.slice(5,7)}</i></span>`;continue}
         const we=r.w.sab||r.w.dom;cells+=`<span class="gw ${r.w.t}${k?"":" now"}${k<0?" past":""}" title="Settimana del ${fmt(m)}${we?" · weekend: sabato "+(LAB[r.w.sab]||"riposo")+", domenica "+(LAB[r.w.dom]||"riposo"):""}">${r.i<0?"⟳":"S"+(r.i+1)}<b>${r.w.t}</b><i>${we?"WE":"&nbsp;"}</i><i class="gwd">${+m.slice(8)}/${+m.slice(5,7)}</i></span>`}
@@ -1386,7 +1403,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
        return `<div class="gprow"><span class="gpn">${p.name}</span><label class="gpo">${refLab}<select id="go${p.id}" data-go="${p.id}">${opt(String(cur),Object.fromEntries(v.weeks.map((_,i)=>[i,"S"+(i+1)])))}</select></label><div class="gws">${cells}</div></div>`}).join(""):'<p class="muted">Nessuna persona a turni in questo reparto.</p>';
      {// Verifica semplice: nella settimana della data scelta, i turni effettivi rispettano il giro?
       const c0=monday(gChk||todayIso),days=[0,1,2,3,4,5,6].map(k=>add(c0,k)),pp=grp.filter(p=>p.prof!=="giornata"&&p.prof!=="giornataSV"&&p.prof!=="none"&&inGrid(p));let nb=0;
-      const exp=(p,day)=>{if(S.fest.includes(day))return "R";const r=wkOf(p,c0);if(!r)return null;return applyRules(p,day,expW(p,r.w,D(day).getDay()))};
+      const exp=(p,day)=>{if(S.fest.includes(day))return "R";const r=wkOf(p,c0);if(!r)return null;return applyRules(p,day,expW(p,r.w,D(day).getDay(),day))};
       const rows=pp.map(p=>`<tr><td class="name">${esc(p.name)}</td>${days.map(day=>{const a=shift(p,day),e=exp(p,day),ab=OFFC.includes(a)&&a!=="R"||absent(p,day),rc=a==="R"&&!S.ov[p.id+"|"+day]&&!hOf(p.id+"|"+day)&&rcDay(p,day),ok=e==null||ab||rc||a===e;if(!ok)nb++;
         return `<td class="c ${a}${ok?"":" bad"}" title="${fmt(day)} · effettivo: ${LAB[a]||a}${e?" · giro: "+(LAB[e]||e):""}">${TXT[a]||(a==="R"?"·":a)}${ok?"":`<small>giro ${e==="R"?"riposo":e}</small>`}</td>`}).join("")}</tr>`).join("");
       $("gchk").innerHTML=`<div class="row" style="align-items:flex-end;gap:10px"><strong>Verifica giro</strong><label>Data da verificare<input type="date" id="gckd" value="${gChk||todayIso}"></label><span class="muted" style="padding-bottom:8px">settimana dal ${fmt(c0)} al ${fmt(add(c0,6))}</span></div><span class="${nb?"":"muted"}" style="${nb?"color:#d33;font-weight:600":""}">${nb?nb+(nb===1?" giorno non rispetta":" giorni non rispettano")+" il giro":"✓ tutti rispettano il giro"}</span>
@@ -1411,10 +1428,16 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
       ${planOnly()?"":`<label class="chk wide pianf"><input type="checkbox" id="ppi${p.id}" data-pian="${p.id}"${p.pian?" checked":""}> <span><strong>Pianificatore</strong> · vede Turni (Montastampi, Regole, Giro turni) e Impostazioni solo degli enti scelti</span></label>${p.pian?`<div class="chips"><span class="cl">Pianifica</span>${S.reparti.map(r=>`<label class="chip"><input type="checkbox" id="ppr${p.id}_${r.id}" data-ppr="${p.id}" value="${r.id}"${(pianOf(p)||[]).includes(r.id)?" checked":""}>${r.name}</label>`).join("")}</div>`:""}`}
       ${lvl(p)>1||(p.reps||[]).length?`<div class="chips"><span class="cl">Responsabile anche di</span>${RP().filter(r=>r.id!==p.rep).map(r=>`<label class="chip"><input type="checkbox" id="ps${p.id}_${r.id}" data-seg="${p.id}" value="${r.id}"${(p.reps||[]).includes(r.id)?" checked":""}>${r.name}</label>`).join("")||'<span class="muted">—</span>'}</div>`:""}
       <div class="chips"><span class="cl">Può vedere</span>${RP().map(r=>`<label class="chip"><input type="checkbox" id="pv${p.id}_${r.id}" data-see="${p.id}" value="${r.id}"${seeOf(p).includes(r.id)?" checked":""}>${r.name}</label>`).join("")}</div>
+      ${chgHtml(p)}
       ${ruleHtml(p)}
       ${accHtml(p)}
     </article>`}).join("")||'<p class="muted">Nessuna persona trovata.</p>'}</div>
-    <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:12px"><input id="padd" placeholder="Nome e cognome" style="flex:1;min-width:0"><button class="pri" id="paddb">Aggiungi persona</button></div>`;
+    <div style="border-top:1px solid var(--line);padding-top:12px;margin-top:12px"><strong>Nuova persona</strong><div class="pf" style="margin-top:6px"><label class="wide">Nome e cognome<input id="padd" placeholder="Nome e cognome"></label>
+     <label>Reparto<select id="pnr">${opt(String(window._pnr||(me?giroRep:(repF||(S.reparti[0]||{}).id))),Object.fromEntries(RP().map(r=>[r.id,r.name])))}</select></label><label>Ingresso dal<input type="date" id="pnd" value="${window._pnd||todayIso}"></label>
+     <label>Piano turni<select id="pnp">${opt("standard",PROF)}</select></label>
+     ${(()=>{const rp=+(window._pnr||(me?giroRep:(repF||(S.reparti[0]||{}).id))),d=window._pnd||todayIso,v=verOf((S.reparti.find(r=>r.id===rp)||{}).versions||S.versions,d),ws=v&&!v.uni&&!v.auto?(v.weeks||[]):[],col=S.people.filter(q=>q.rep===rp&&inGrid(q)&&giroIx(q,d)!=null);
+       return `<label>Settimana del giro di ingresso<select id="pns">${ws.length?ws.map((w,i)=>`<option value="${i}">S${i+1} · ${LAB[w.t]||w.t}${w.sab||w.dom?" + WE":""}</option>`).join(""):'<option value="">—</option>'}</select></label><label>Oppure segui il giro di<select id="pnc"><option value="">—</option>${col.map(q=>`<option value="${q.id}">${esc(q.name)} (S${giroIx(q,d)+1})</option>`).join("")}</select></label>`})()}</div>
+     <span class="muted">Prima della data di ingresso non ha turni. Dalla settimana di ingresso fa la settimana del giro scelta e poi prosegue con le successive.</span><div class="row" style="margin-top:6px"><button class="pri" id="paddb">Aggiungi persona</button></div></div>`;
     $("pfind").oninput=e=>{window._pq=e.target.value;render();const f=$("pfind");f.focus();f.setSelectionRange(f.value.length,f.value.length)};
     $("pfrep").onchange=e=>{window._pr=+e.target.value;render()};
     $("pflv").innerHTML=`<option value="0">Tutti i livelli</option>${S.levels.map((n,i)=>`<option value="${i+1}">${n}</option>`).join("")}`;$("pflv").value=String(window._pl||0);$("pflv").onchange=e=>{window._pl=+e.target.value;render()};
@@ -1422,7 +1445,10 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     const mv=(id,dir)=>{const p0=person(id),grp=S.people.filter(p=>p.rep===p0.rep).sort(pOrd),i=grp.indexOf(p0),j=i+dir;if(j<0||j>=grp.length)return toast("È già "+(dir<0?"il primo":"l'ultimo")+" del reparto");grp.splice(i,1);grp.splice(j,0,p0);grp.forEach((p,k)=>p.ord=k);S.people.sort(pOrd);save();fillWho();if(SORT!=="man")toast("Ordine salvato: per vederlo scegli \"Ordine impostato\" sopra la griglia");render()};
     $("ppl").querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>mv(+b.dataset.up,-1));$("ppl").querySelectorAll("[data-dn]").forEach(b=>b.onclick=()=>mv(+b.dataset.dn,1));
     $("ppl").querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>confirm2(b,()=>{const id=+b.dataset.rm;S.people=S.people.filter(p=>p.id!==id);S.reqs=S.reqs.filter(r=>r.pid!==id);for(const k in S.ov)if(k.startsWith(id+"|"))delete S.ov[k];save();fillWho();toast("Persona tolta");render()}));
-    $("paddb").onclick=()=>{const v=$("padd").value.trim();if(!v)return toast("Scrivi il nome");{const rp=S.reparti.find(r=>r.id===(me?giroRep:(repF||(S.reparti[0]||{}).id)));if(isAutoRep(rp))return toast("Montastampi: le persone si gestiscono dalla scheda Regole > Individuali")}{const u0=userOf(v);let u=u0,k=2;while(S.people.some(x=>x.acc&&x.acc.user===u))u=u0+k++;S.people.push({id:Math.max(0,...S.people.map(p=>p.id))+1,name:v,prof:"standard",off:0,rep:me?giroRep:(repF||(S.reparti[0]||{}).id),acc:{user:u,must:true,tmp:PW0}});save();fillWho();toast(`Persona aggiunta · utente ${u}, password ${PW0}`)}render()};
+    $("pnr").onchange=e=>{window._pnr=+e.target.value;const k=$("padd").value;render();$("padd").value=k};$("pnd").onchange=e=>{window._pnd=e.target.value||todayIso;const k=$("padd").value;render();$("padd").value=k};
+    $("paddb").onclick=()=>{const v=$("padd").value.trim();if(!v)return toast("Scrivi il nome");const nrep=+$("pnr").value,nd=$("pnd").value||todayIso;{const rp=S.reparti.find(r=>r.id===nrep);if(isAutoRep(rp))return toast("Montastampi: le persone si gestiscono dalla scheda Regole > Individuali")}{const u0=userOf(v);let u=u0,k=2;while(S.people.some(x=>x.acc&&x.acc.user===u))u=u0+k++;const cid=+$("pnc").value,c=cid&&person(cid);let pf=$("pnp").value,sv=$("pns").value,sx=sv===""?null:+sv,seg;if(c){sx=giroIx(c,nd);seg=c.name;pf=profAt(c,nd)}
+      const np={id:Math.max(0,...S.people.map(p=>p.id))+1,name:v,prof:pf,off:0,rep:nrep,in:nd,chg:[Object.assign({from:nd,prof:pf,ingr:true},sx!=null?{s:sx}:{},seg?{seg}:{})],acc:{user:u,must:true,tmp:PW0}};
+      S.people.push(np);window._pnd=null;save();fillWho();toast(`Persona aggiunta · utente ${u}, password ${PW0}`)}render()};
     $("ppl").querySelectorAll("[data-seg]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.seg),v=+c.value;p.reps=(p.reps||[]).filter(x=>x!==v);if(c.checked)p.reps.push(v);save();toast("Reparti seguiti aggiornati");render()});
     $("ppl").querySelectorAll("[data-see]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.see),v=+c.value;let a=seeOf(p).filter(x=>x!==v);if(c.checked)a.push(v);p.see=a;save();toast("Visibilità aggiornata")});
     $("ppl").querySelectorAll("[data-ra2]").forEach(b=>b.onclick=()=>{const id=+b.dataset.ra2,p=person(id),f=$("rgf"+id).value,t=$("rgt"+id).value;if(t&&f&&t<f)return toast("La data finale è prima di quella iniziale");
@@ -1436,6 +1462,15 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     $("ppl").querySelectorAll("[data-pian]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.pian);p.pian=c.checked;if(c.checked&&!(p.pianR||[]).length)p.pianR=p.rep?[p.rep]:[(S.reparti[0]||{}).id];save();fillWho();toast(c.checked?p.name+" ora è pianificatore":"Funzione pianificatore tolta a "+p.name);render()});
     $("ppl").querySelectorAll("[data-ppr]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.ppr),v=+c.value;let a=(pianOf(p)||[]).filter(x=>x!==v);if(c.checked)a.push(v);if(!a.length){c.checked=true;return toast("Lascia almeno un ente")}p.pianR=a;save();toast("Enti pianificati aggiornati")});
     $("ppl").querySelectorAll("[data-sw]").forEach(c=>c.onchange=()=>{person(+c.dataset.sw).sw=c.checked;save();toast(c.checked?"Smart working abilitato":"Smart working disabilitato")});
+    $("ppl").querySelectorAll("[data-chd]").forEach(x=>x.onchange=()=>{window._chd=window._chd||{};window._chd[+x.dataset.chd]=x.value||todayIso;render()});
+    $("ppl").querySelectorAll("[data-chc]").forEach(()=>{});
+    $("ppl").querySelectorAll("[data-cd]").forEach(b=>b.onclick=()=>confirm2(b,()=>{const p=person(+b.dataset.cd),fr=b.dataset.cf;freezePast([p],()=>{p.chg=(p.chg||[]).filter(c=>c.from!==fr);if(p.in===fr&&!(p.chg||[]).some(c=>c.ingr))delete p.in});logIt(p.id,"cambio dal "+fmt(fr)+" tolto");save();toast("Cambio tolto");render()}));
+    $("ppl").querySelectorAll("[data-cha]").forEach(b=>b.onclick=()=>{const p=person(+b.dataset.cha),d=$("chd"+p.id).value;if(!d)return toast("Scegli la data");
+      const cid=+$("chc"+p.id).value,c=cid&&person(cid);let pf=$("chp"+p.id).value,sv=$("chs"+p.id).value,sx=sv===""?null:+sv,seg;
+      if(c){sx=giroIx(c,d);seg=c.name;pf=profAt(c,d)}
+      const old=chgAt(p,d),same=profAt(p,d)===pf&&(sx==null||giroIx(p,d)===sx);if(same)return toast("Nessuna differenza da quello che fa già in quella data");
+      freezePast([p],()=>{p.chg=(p.chg||[]).filter(x=>x.from!==d);const n={from:d,prof:pf};if(sx!=null)n.s=sx;if(seg)n.seg=seg;p.chg.push(n)});
+      logIt(p.id,`dal ${fmt(d)}: ${PROF[pf]||PROF0[pf]||pf}${sx!=null?", giro S"+(sx+1):""}${seg?" (come "+seg+")":""}`);save();toast("Aggiornato solo "+p.name.split(" ")[0]+" dal "+fmt(d));render()});
     $("ppl").querySelectorAll("select[data-f]").forEach(s=>s.onchange=()=>{const p=person(+s.dataset.p);freezePast([p],()=>{p[s.dataset.f]=s.dataset.f==="prof"?s.value:+s.value;if(lvl(p)<3){if(!p.rep)p.rep=(S.reparti[0]||{}).id;if(p.prof==="none")p.prof="giornata"}});if(s.dataset.f==="rep"&&p.reps)p.reps=p.reps.filter(x=>x!==p.rep);save();fillWho();toast("Profilo aggiornato");render()});
     $("reps").innerHTML=S.reparti.map(r=>{const n=S.people.filter(p=>p.rep===r.id).length;return `<div class="row" style="flex-wrap:nowrap;padding:4px 0"><input id="rn${r.id}" data-rn="${r.id}" value="${r.name.replace(/"/g,"&quot;")}" aria-label="Nome reparto" style="flex:1;min-width:0"><span class="muted">${n} pers.</span>${n||isAutoRep(r)?"":`<button data-rr="${r.id}" aria-label="Elimina reparto">✕</button>`}</div>`}).join("");
     $("reps").querySelectorAll("[data-rn]").forEach(i=>i.onchange=()=>{const v=i.value.trim();if(!v)return toast("Il nome non può essere vuoto");S.reparti.find(r=>r.id==i.dataset.rn).name=v;save();fillWho();toast("Reparto rinominato");render()});
