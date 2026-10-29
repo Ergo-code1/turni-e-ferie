@@ -187,7 +187,7 @@ tr.rep td{padding:10px 0 0!important;text-align:left}
 .gpo{flex-direction:row;align-items:center;gap:0}.gpo select{width:100%}.gpo{font-size:11px;gap:6px}
 .gws{display:flex;gap:3px;overflow-x:auto}
 .gw{flex:none;display:flex;flex-direction:column;align-items:center;min-width:34px;padding:3px 0;border-radius:6px;font-size:10px;font-family:var(--mono)}
-.gw b{font-size:12px}.gw i{font-style:normal;font-size:8.5px;opacity:.8}.gw.past{opacity:.55}.gwd{font-size:9px;color:var(--muted)}.gw.now{outline:2px solid var(--hi);outline-offset:-1px}
+.gw b{font-size:12px}.gck{border-collapse:collapse;font-size:12px}.gck th,.gck td{padding:3px 4px;text-align:center;white-space:nowrap}.gck td.name,.gck th.name{text-align:left}.gck td.c{font-family:var(--mono);border-radius:4px}.gck td.bad{outline:2px solid #d33;outline-offset:-2px}.gck small{display:block;font-size:9px;color:#d33}.gw i{font-style:normal;font-size:8.5px;opacity:.8}.gw.past{opacity:.55}.gwd{font-size:9px;color:var(--muted)}.gw.now{outline:2px solid var(--hi);outline-offset:-1px}
 @media (max-width:560px){.gprow{grid-template-columns:1fr 90px}.gws{grid-column:1/-1}}
 .notif{border-color:color-mix(in srgb,var(--hi) 55%,var(--line))}
 .notif h2::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--hi);margin-right:8px;vertical-align:2px}
@@ -404,7 +404,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
       <div class="vers" id="vers"></div>
       <div class="row" style="margin-bottom:10px"><label>Valida dal<input type="date" id="vfrom"></label><label>Fino al<input type="date" id="vto"></label><button id="vtoclr" style="align-self:flex-end">Togli fine (in poi)</button><button id="vdel" style="align-self:flex-end">Elimina versione</button></div><label style="margin-bottom:10px">Tipo<select id="vtype"><option value="giro">Giro a settimane</option><option value="uni">Turno default: tutto il reparto fa sempre lo stesso turno</option><option value="auto">Automatica a regole</option></select></label><div id="uni"></div>
       <div id="weeks"></div><button id="addwk" style="margin-top:8px">Aggiungi settimana</button>
-      <div class="gppl" id="gpplw"><strong>Chi segue questo giro</strong><p class="muted" style="margin:2px 0 8px" id="gpnote"></p><div id="gppl"></div></div>
+      <div class="gppl" id="gpplw"><strong>Chi segue questo giro</strong><p class="muted" style="margin:2px 0 8px" id="gpnote"></p><div id="gppl"></div><div id="gchk" style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px"></div></div>
       <div class="req" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
         <strong>Nuova versione del giro</strong>
         <div class="row"><label>Inizia dal<input type="date" id="vnew"></label><label>Fino al<input type="date" id="vnewto"></label><button class="pri" id="vadd" style="align-self:flex-end">Crea copiando quella selezionata</button></div><span class="muted">Fino al vuoto = da quella data in poi. Con una data di fine, dopo torna a valere il giro precedente.</span>
@@ -428,7 +428,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.1.3",APP_REV_DATE="28/10/2026";
+const APP_REV="15.1.4",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -1384,6 +1384,14 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
         const we=r.w.sab||r.w.dom;cells+=`<span class="gw ${r.w.t}${k?"":" now"}${k<0?" past":""}" title="Settimana del ${fmt(m)}${we?" · weekend: sabato "+(LAB[r.w.sab]||"riposo")+", domenica "+(LAB[r.w.dom]||"riposo"):""}">${r.i<0?"⟳":"S"+(r.i+1)}<b>${r.w.t}</b><i>${we?"WE":"&nbsp;"}</i><i class="gwd">${+m.slice(8)}/${+m.slice(5,7)}</i></span>`}
        if(p.prof==="giornata"||p.prof==="giornataSV")return `<div class="gprow"><span class="gpn">${p.name}</span><span class="muted" style="grid-column:2/-1">Profilo ${PROF[p.prof]}: lavora lun–ven 8–17 e non segue il giro. Per farla ruotare cambia il profilo in "Turno standard" qui a fianco.</span></div>`;
        return `<div class="gprow"><span class="gpn">${p.name}</span><label class="gpo">${refLab}<select id="go${p.id}" data-go="${p.id}">${opt(String(cur),Object.fromEntries(v.weeks.map((_,i)=>[i,"S"+(i+1)])))}</select></label><div class="gws">${cells}</div></div>`}).join(""):'<p class="muted">Nessuna persona a turni in questo reparto.</p>';
+     {// Verifica semplice: nella settimana della data scelta, i turni effettivi rispettano il giro?
+      const days=[0,1,2,3,4,5,6].map(k=>add(m0,k)),pp=grp.filter(p=>p.prof!=="giornata"&&p.prof!=="giornataSV"&&p.prof!=="none"&&inGrid(p));let nb=0;
+      const exp=(p,day)=>{if(S.fest.includes(day))return "R";const r=wkOf(p,m0);if(!r)return null;return applyRules(p,day,expW(p,r.w,D(day).getDay()))};
+      const rows=pp.map(p=>`<tr><td class="name">${esc(p.name)}</td>${days.map(day=>{const a=shift(p,day),e=exp(p,day),ab=OFFC.includes(a)&&a!=="R"||absent(p,day),rc=a==="R"&&!S.ov[p.id+"|"+day]&&!hOf(p.id+"|"+day)&&rcDay(p,day),ok=e==null||ab||rc||a===e;if(!ok)nb++;
+        return `<td class="c ${a}${ok?"":" bad"}" title="${fmt(day)} · effettivo: ${LAB[a]||a}${e?" · giro: "+(LAB[e]||e):""}">${TXT[a]||(a==="R"?"·":a)}${ok?"":`<small>giro ${e==="R"?"riposo":e}</small>`}</td>`}).join("")}</tr>`).join("");
+      $("gchk").innerHTML=`<strong>Verifica giro · settimana del ${fmt(m0)}</strong> <span class="${nb?"":"muted"}" style="${nb?"color:#d33;font-weight:600":""}">${nb?nb+(nb===1?" giorno non rispetta":" giorni non rispettano")+" il giro":"✓ tutti rispettano il giro"}</span>
+       <div class="scroll" style="margin-top:6px"><table class="gck"><tr><th class="name"></th>${days.map(d=>`<th>${"DLMMGVS"[D(d).getDay()]}<br>${+d.slice(8)}</th>`).join("")}</tr>${rows}</table></div>
+       <p class="muted" style="margin-top:4px">Turni effettivi (con modifiche a mano) confrontati con il giro in bozza. Ferie, assenze e riposi compensativi non contano; le caselle col bordo rosso indicano il turno previsto dal giro.</p>`}
      $("gppl").querySelectorAll("[data-go]").forEach(sl=>sl.onchange=()=>{const V=edV();if(!V)return;V.off=V.off||{};V.off[+sl.dataset.go]=(((+sl.value-wkR)%W)+W)%W;save();toast("Modifica in bozza: premi Rendi operativo");render()});}
     const maxW=Math.max(...S.reparti.flatMap(r=>r.versions.map(x=>(x.weeks||[]).length)),...DV.map(x=>(x.weeks||[]).length));
     const pq=(window._pq||"").toLowerCase(),pr=window._pr||0;
