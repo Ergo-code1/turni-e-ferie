@@ -428,7 +428,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.2.0",APP_REV_DATE="28/10/2026";
+const APP_REV="15.2.1",APP_REV_DATE="28/10/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -878,7 +878,14 @@ const hOf=k=>S.hist&&S.hist[k];
 const shift=(p,day)=>{const k=p.id+"|"+day,o=S.ov[k]||hOf(k);return o==="RC"?"R":o||plan(p,day)}
 // Niente effetti sul passato: prima di una modifica alla pianificazione (giro, profilo, regole) salva in S.hist
 // i turni dei giorni passati (da inizio anno precedente a ieri) che la modifica cambierebbe
-function freezePast(ppl,fn){const T=todayIso,st=iso(new Date().getFullYear()-1,0,1),old=new Map(),cur=p=>d=>rcDay(p,d)?"RC":plan0(p,d);
+// Annulla: prima di ogni modifica su una sola persona salvo com'era (piano, giro, regole, cambi, storico dei giorni passati)
+const UNDO={},UF=["prof","off","rules","chg","in","rep"];
+function snapP(p){const pre=p.id+"|",h={};for(const k in S.hist)if(k.startsWith(pre))h[k]=S.hist[k];(UNDO[p.id]=UNDO[p.id]||[]).push({f:JSON.parse(JSON.stringify(UF.reduce((o,k)=>(o[k]=p[k],o),{}))),h,t:Date.now()});if(UNDO[p.id].length>10)UNDO[p.id].shift()}
+function undoP(id){const p=person(id),st=UNDO[id];if(!p||!st||!st.length)return;const u=st.pop(),pre=id+"|";
+ UF.forEach(k=>{if(u.f[k]===undefined)delete p[k];else p[k]=u.f[k]});for(const k of Object.keys(S.hist))if(k.startsWith(pre)&&!(k in u.h))delete S.hist[k];Object.assign(S.hist,u.h);clrPC();
+ logIt(id,"ultima modifica annullata");save();toast("Modifica annullata: "+p.name.split(" ")[0]+" è tornato com'era");render()}
+const undoBtn=p=>(UNDO[p.id]||[]).length?`<button data-undo="${p.id}" style="margin-top:6px">↶ Annulla l'ultima modifica (${UNDO[p.id].length})</button>`:"";
+function freezePast(ppl,fn){if(ppl.length===1&&ppl[0])snapP(ppl[0]);const T=todayIso,st=iso(new Date().getFullYear()-1,0,1),old=new Map(),cur=p=>d=>rcDay(p,d)?"RC":plan0(p,d);
   clrPC();for(const p of ppl){const c=cur(p);for(let d=st;d<T;d=add(d,1)){const k=p.id+"|"+d;if(S.ov[k]||hOf(k))continue;old.set(k,c(d))}}
   fn();clrPC();let n=0;
   for(const [k,v] of old){const i=k.indexOf("|"),p=person(+k.slice(0,i));if(!p)continue;const d=k.slice(i+1);if((rcDay(p,d)?"RC":plan0(p,d))!==v){S.hist[k]=v;n++}}
@@ -916,7 +923,7 @@ function chgHtml(p){if(!p.rep||lvl(p)>=3&&profAt(p,todayIso)==="none"&&!(p.chg||
  <label>Settimana del giro in quella settimana<select id="chs${p.id}">${go.length?go.map(([i,l])=>`<option value="${i}"${i===cur?" selected":""}>${l}</option>`).join(""):'<option value="">—</option>'}</select></label>
  <label>Oppure segui il giro di<select id="chc${p.id}"><option value="">—</option>${col.map(q=>`<option value="${q.id}">${esc(q.name)} (S${giroIx(q,d0)+1})</option>`).join("")}</select></label></div>
  <span class="muted">Ora fa S${cur!=null?cur+1:"–"} nella settimana del ${fmt(monday(d0))}. Dalla settimana scelta prosegue con le successive. I giorni prima della data non cambiano.</span>
- <button class="pri" data-cha="${p.id}">Aggiorna solo questa persona</button></div>`}
+ <button class="pri" data-cha="${p.id}">Aggiorna solo questa persona</button>${undoBtn(p)}</div>`}
 function ruleHtml(p){if(!inGrid(p))return "";const rs=p.rules||[],f=d=>D(d).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"});
  return `<div class="acc"><span class="cl">Regole speciali</span>${rs.length?rs.map((r,i)=>`<div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span>Ogni ${r.every>1?r.every+"ª settimana di ":""}${DOWN[r.dow]} → <strong>${RULC[r.code]||r.code}</strong>${r.always?" (anche se di riposo)":""}<span class="muted"> · ${r.from?"dal "+f(r.from):""}${r.to?" al "+f(r.to):" in poi"}</span></span><button class="ghost" data-rd="${p.id}" data-ri="${i}" aria-label="Togli regola">✕</button></div>`).join(""):'<span class="muted">Nessuna. Esempio: tutti i lunedì mattina, anche se il giro dice altro.</span>'}
  <div class="pf"><label>Giorno<select id="rgd${p.id}">${[1,2,3,4,5,6,0].map(k=>`<option value="${k}">${DOWN[k]}</option>`).join("")}</select></label><label>Turno<select id="rgc${p.id}">${Object.entries(RULC).map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></label>
@@ -1464,6 +1471,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     $("ppl").querySelectorAll("[data-sw]").forEach(c=>c.onchange=()=>{person(+c.dataset.sw).sw=c.checked;save();toast(c.checked?"Smart working abilitato":"Smart working disabilitato")});
     $("ppl").querySelectorAll("[data-chd]").forEach(x=>x.onchange=()=>{window._chd=window._chd||{};window._chd[+x.dataset.chd]=x.value||todayIso;render()});
     $("ppl").querySelectorAll("[data-chc]").forEach(()=>{});
+    $("ppl").querySelectorAll("[data-undo]").forEach(b=>b.onclick=()=>undoP(+b.dataset.undo));
     $("ppl").querySelectorAll("[data-cd]").forEach(b=>b.onclick=()=>confirm2(b,()=>{const p=person(+b.dataset.cd),fr=b.dataset.cf;freezePast([p],()=>{p.chg=(p.chg||[]).filter(c=>c.from!==fr);if(p.in===fr&&!(p.chg||[]).some(c=>c.ingr))delete p.in});logIt(p.id,"cambio dal "+fmt(fr)+" tolto");save();toast("Cambio tolto");render()}));
     $("ppl").querySelectorAll("[data-cha]").forEach(b=>b.onclick=()=>{const p=person(+b.dataset.cha),d=$("chd"+p.id).value;if(!d)return toast("Scegli la data");
       const cid=+$("chc"+p.id).value,c=cid&&person(cid);let pf=$("chp"+p.id).value,sv=$("chs"+p.id).value,sx=sv===""?null:+sv,seg;
