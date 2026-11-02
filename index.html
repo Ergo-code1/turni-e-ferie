@@ -428,7 +428,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.2.2",APP_REV_DATE="28/10/2026";
+const APP_REV="15.2.3",APP_REV_DATE="02/11/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -1015,7 +1015,7 @@ function editCell(p,day){
   <div class="row opts">${codes.map(k=>`<button class="${k}" data-k="${k}" title="${LAB[k]}">${TXT[k]||k}</button>`).join("")}${o?'<button data-k="">Ripristina giro</button>':""}</div>`;
   if(r){const what=r.tipo==="F"?(r.h===8?"Ferie":"Permesso"):TIPI[r.tipo],per=fmt(r.days[0])+(r.days.length>1?" – "+fmt(r.days[r.days.length-1]):"");
    s.insertAdjacentHTML("beforeend",`<div class="req" style="border-top:1px solid var(--line);padding-top:10px"><strong>${what}${FULL.includes(r.tipo)?"":" · "+r.h+" h"} <span class="muted">${r.st==="ok"?"approvata":"in attesa"} · ${per}${r.note?" · "+r.note:""}</span></strong>
-    <div class="row">${FULL.includes(r.tipo)?"":`<label>Ore in questo giorno<select id="rqh">${[0.5,1,2,3,4,5,6,7,8].map(h=>`<option${h===r.h?" selected":""}>${h}</option>`).join("")}</select></label>`}
+    <div class="row">${FULL.includes(r.tipo)?"":`<label>Ore in questo giorno<select id="rqh">${Array.from({length:16},(_,i)=>(i+1)/2).map(h=>`<option value="${h}"${h===r.h?" selected":""}>${String(h).replace(".",",")}</option>`).join("")}</select></label>`}
     <button id="rqday" style="align-self:flex-end">Togli questo giorno</button>${r.days.length>1?`<button id="rqall" style="align-self:flex-end">Revoca tutta la richiesta</button>`:""}${r.tipo==="ST"&&r.st==="ok"?'<button id="rqpdf" style="align-self:flex-end">Scarica PDF</button>':""}</div></div>`);}
   s.hidden=false;$("xs").onclick=closeSheet;
   if(r){const lg=t=>logIt(p.id,`${r.tipo==="F"?"ferie/permesso":TIPI[r.tipo].toLowerCase()} ${t}`);
@@ -1034,7 +1034,7 @@ function reqSheet(){
   ${(()=>{const c=conflicts(me,sel);return c.length?`<div class="warn">⚠ In questi giorni qualcuno ha già ferie approvate — ${c.join(" · ")}</div>`:""})()}
   ${(()=>{const ok=okTipi(person(me),sel);return ok.length?"":`<div class="warn">${sel.some(d=>festDay(person(me),d))&&sel.some(d=>!festDay(person(me),d))?"Hai scelto sia festivi sia giorni di lavoro: invia due richieste separate.":"Nessuna voce disponibile per questi giorni."}</div>`})()}
   <div class="row"><label>Tipo<select id="tipo">${(()=>{const ok=okTipi(person(me),sel);if(!ok.some(t=>t.k===tipo)&&ok.length)tipo=ok[0].k;return opt(tipo,Object.fromEntries(ok.map(t=>[t.k,t.name])))})()}</select></label>
-  <label id="hrsl"${FULL.includes(tipo)?" hidden":""}>Ore al giorno<select id="hrs">${[1,2,3,4,5,6,7,8].map(h=>`<option${h===hrs?" selected":""}>${h}</option>`).join("")}</select></label>
+  <label id="hrsl"${FULL.includes(tipo)?" hidden":""}>Ore al giorno<select id="hrs">${Array.from({length:16},(_,i)=>(i+1)/2).map(h=>`<option value="${h}"${h===hrs?" selected":""}>${String(h).replace(".",",")}</option>`).join("")}</select></label>
   <label id="notel"${tipo==="ST"?"":" hidden"} style="flex:1;min-width:160px">Motivo<input id="note" placeholder="es. consegna urgente"></label>
   <button class="pri" id="send" style="align-self:flex-end">Invia richiesta</button></div>`;
   s.hidden=false;
@@ -1048,7 +1048,7 @@ function modSheet(r,day){
   s.innerHTML=`<div class="row" style="justify-content:space-between"><strong>Modifica · ${D(day).toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})}</strong><button id="xs">Chiudi</button></div>
   <span class="muted">Ora: ${what} (${r.st==="ok"?"approvata":"in attesa"}). Inviando la modifica questa voce viene eliminata e parte una nuova richiesta da approvare.</span>
   <div class="row"><label>Nuovo tipo<select id="tipo">${opt(tipo,Object.fromEntries(ok.map(t=>[t.k,t.name])))}</select></label>
-  <label id="hrsl"${FULL.includes(tipo)?" hidden":""}>Ore<select id="hrs">${[1,2,3,4,5,6,7,8].map(h=>`<option${h===hrs?" selected":""}>${h}</option>`).join("")}</select></label>
+  <label id="hrsl"${FULL.includes(tipo)?" hidden":""}>Ore<select id="hrs">${Array.from({length:16},(_,i)=>(i+1)/2).map(h=>`<option value="${h}"${h===hrs?" selected":""}>${String(h).replace(".",",")}</option>`).join("")}</select></label>
   <label id="notel"${tipo==="ST"?"":" hidden"} style="flex:1;min-width:160px">Motivo<input id="note" placeholder="es. consegna urgente"></label>
   <button class="pri" id="send" style="align-self:flex-end">Invia modifica</button><button id="mdel" style="align-self:flex-end">Elimina questo giorno</button></div>`;
   s.hidden=false;$("xs").onclick=closeSheet;
