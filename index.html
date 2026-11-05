@@ -428,7 +428,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.2.4",APP_REV_DATE="05/11/2026";
+const APP_REV="15.2.5",APP_REV_DATE="05/11/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -1435,7 +1435,13 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     $("pfind").value=window._pq||"";
     const lf=window._pl||0;const PL=S.people.filter(p=>(!lf||lvl(p)===lf)&&(planOnly()?p.id!==me&&planR().includes(p.rep):!me||(p.id!==me&&lvl(p)<lvl(person(me))&&myR().includes(p.rep)))&&(!pq||p.name.toLowerCase().includes(pq))&&(!pr||(pr===-1?!p.rep:segue(p).includes(pr)))).sort((a,b)=>(a.rep||0)-(b.rep||0)||S.people.indexOf(a)-S.people.indexOf(b));
     const ini=n=>n.trim().split(/\s+/).map(x=>x[0]).slice(0,2).join("").toUpperCase();
-    $("ppl").innerHTML=`<div class="pgrid">${PL.map(p=>{const hi=lvl(p)>=3;return `<article class="pc lv${lvl(p)}">
+    $("ppl").innerHTML=`<div style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px"><strong>Nuova persona</strong><div class="pf" style="margin-top:6px"><label class="wide">Nome e cognome<input id="padd" placeholder="Nome e cognome"></label>
+     <label>Reparto<select id="pnr">${opt(String(window._pnr||(me?giroRep:(repF||(S.reparti[0]||{}).id))),Object.fromEntries(RP().map(r=>[r.id,r.name])))}</select></label><label>Ingresso dal<input type="date" id="pnd" value="${window._pnd||todayIso}"></label>
+     <label>Piano turni<select id="pnp">${opt("standard",PROF)}</select></label>
+     ${(()=>{const rp=+(window._pnr||(me?giroRep:(repF||(S.reparti[0]||{}).id))),d=window._pnd||todayIso,v=verOf((S.reparti.find(r=>r.id===rp)||{}).versions||S.versions,d),ws=v&&!v.uni&&!v.auto?(v.weeks||[]):[],col=S.people.filter(q=>q.rep===rp&&inGrid(q)&&giroIx(q,d)!=null);
+       return `<label>Settimana del giro di ingresso<select id="pns">${ws.length?ws.map((w,i)=>`<option value="${i}">S${i+1} · ${LAB[w.t]||w.t}${w.sab||w.dom?" + WE":""}</option>`).join(""):'<option value="">—</option>'}</select></label><label>Oppure segui il giro di<select id="pnc"><option value="">—</option>${col.map(q=>`<option value="${q.id}">${esc(q.name)} (S${giroIx(q,d)+1})</option>`).join("")}</select></label>`})()}</div>
+     <span class="muted">Prima della data di ingresso non ha turni. Dalla settimana di ingresso fa la settimana del giro scelta e poi prosegue con le successive.</span><div class="row" style="margin-top:6px"><button class="pri" id="paddb">Aggiungi persona</button></div></div>
+    <div class="pgrid">${PL.map(p=>{const hi=lvl(p)>=3;return `<article class="pc lv${lvl(p)}">
       <header><span class="av">${ini(p.name)}</span><input id="pn${p.id}" data-n="${p.id}" value="${p.name.replace(/"/g,"&quot;")}" aria-label="Nome"><span class="lvp">${lvName(p)}</span><button class="ghost" data-up="${p.id}" aria-label="Sposta su ${p.name}" title="Sposta su">▲</button><button class="ghost" data-dn="${p.id}" aria-label="Sposta giù ${p.name}" title="Sposta giù">▼</button><button class="ghost" data-rm="${p.id}" aria-label="Togli ${p.name}">✕</button></header>
       <div class="pf">
         <label>Livello<select id="pl${p.id}" data-p="${p.id}" data-f="lvl">${opt(String(lvl(p)),Object.fromEntries(S.levels.map((n,i)=>[i+1,n]).filter(([k])=>planOnly()?+k===lvl(p):!me||k<lvl(person(me)))))}</select></label>
@@ -1449,13 +1455,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
       ${chgHtml(p)}
       ${ruleHtml(p)}
       ${accHtml(p)}
-    </article>`}).join("")||'<p class="muted">Nessuna persona trovata.</p>'}</div>
-    <div style="border-top:1px solid var(--line);padding-top:12px;margin-top:12px"><strong>Nuova persona</strong><div class="pf" style="margin-top:6px"><label class="wide">Nome e cognome<input id="padd" placeholder="Nome e cognome"></label>
-     <label>Reparto<select id="pnr">${opt(String(window._pnr||(me?giroRep:(repF||(S.reparti[0]||{}).id))),Object.fromEntries(RP().map(r=>[r.id,r.name])))}</select></label><label>Ingresso dal<input type="date" id="pnd" value="${window._pnd||todayIso}"></label>
-     <label>Piano turni<select id="pnp">${opt("standard",PROF)}</select></label>
-     ${(()=>{const rp=+(window._pnr||(me?giroRep:(repF||(S.reparti[0]||{}).id))),d=window._pnd||todayIso,v=verOf((S.reparti.find(r=>r.id===rp)||{}).versions||S.versions,d),ws=v&&!v.uni&&!v.auto?(v.weeks||[]):[],col=S.people.filter(q=>q.rep===rp&&inGrid(q)&&giroIx(q,d)!=null);
-       return `<label>Settimana del giro di ingresso<select id="pns">${ws.length?ws.map((w,i)=>`<option value="${i}">S${i+1} · ${LAB[w.t]||w.t}${w.sab||w.dom?" + WE":""}</option>`).join(""):'<option value="">—</option>'}</select></label><label>Oppure segui il giro di<select id="pnc"><option value="">—</option>${col.map(q=>`<option value="${q.id}">${esc(q.name)} (S${giroIx(q,d)+1})</option>`).join("")}</select></label>`})()}</div>
-     <span class="muted">Prima della data di ingresso non ha turni. Dalla settimana di ingresso fa la settimana del giro scelta e poi prosegue con le successive.</span><div class="row" style="margin-top:6px"><button class="pri" id="paddb">Aggiungi persona</button></div></div>`;
+    </article>`}).join("")||'<p class="muted">Nessuna persona trovata.</p>'}</div>`;
     $("pfind").oninput=e=>{window._pq=e.target.value;render();const f=$("pfind");f.focus();f.setSelectionRange(f.value.length,f.value.length)};
     $("pfrep").onchange=e=>{window._pr=+e.target.value;render()};
     $("pflv").innerHTML=`<option value="0">Tutti i livelli</option>${S.levels.map((n,i)=>`<option value="${i+1}">${n}</option>`).join("")}`;$("pflv").value=String(window._pl||0);$("pflv").onchange=e=>{window._pl=+e.target.value;render()};
