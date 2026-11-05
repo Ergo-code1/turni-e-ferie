@@ -420,15 +420,12 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 <div class="toast" id="toast" hidden></div>
 <div class="upd" id="upd" role="status" hidden><span><strong>Nuova versione disponibile</strong> <span id="updtxt" class="muted"></span></span><button class="pri" id="updgo">Aggiorna ora</button><button class="ghost" id="updno">Più tardi</button></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // Configurazione Firebase (Console Firebase > Impostazioni progetto > App Web > Configurazione SDK).
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.2.5",APP_REV_DATE="05/11/2026";
+const APP_REV="15.3.0",APP_REV_DATE="05/11/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -511,6 +508,11 @@ async function pyWrite(st){const r=await fetch("/api/tf/state",{method:"POST",he
 // --- Firebase (Firestore, SDK compat da CDN). Documenti come in firebase/README.md ---
 const FB_VER="10.12.2";
 const tfScript=src=>new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>rej(new Error("impossibile caricare "+src));document.head.appendChild(s)});
+// Librerie PDF ed Excel: caricate solo quando servono (o in sottofondo dopo l'apertura), per non rallentare l'avvio
+const CDN="https://cdnjs.cloudflare.com/ajax/libs/";let _pdfP=null,_xlsP=null;
+const needPdf=()=>window.jspdf&&window.jspdf.jsPDF.API.autoTable?Promise.resolve():(_pdfP=_pdfP||tfScript(CDN+"jspdf/2.5.1/jspdf.umd.min.js").then(()=>tfScript(CDN+"jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js")).catch(e=>{_pdfP=null;throw e}));
+const needXlsx=()=>window.XLSX?Promise.resolve():(_xlsP=_xlsP||tfScript(CDN+"xlsx/0.18.5/xlsx.full.min.js").catch(e=>{_xlsP=null;throw e}));
+addEventListener("load",()=>setTimeout(()=>{needPdf().catch(()=>{});needXlsx().catch(()=>{})},4000));
 // --- Accesso con utenti Firebase personali (nome utente → nome@dominio, password con prefisso interno) ---
 const FB_DOM="turni-ergotech.it",fem=u=>u+"@"+FB_DOM,fpw=p=>"tf#"+p,FBM=!!FIREBASE_CONFIG;
 const fbErr=e=>({"auth/too-many-requests":"Troppi tentativi: riprova tra qualche minuto","auth/network-request-failed":"Connessione assente"})[e&&e.code]||"Nome utente o password errati";
@@ -1067,7 +1069,7 @@ function pickSigner(r,cb){const s=$("sheet"),L=[...S.people].sort((a,b)=>{const 
  <div class="row"><button class="pri" id="sgok">Conferma</button><button id="sgno">Annulla</button></div></div>`;s.hidden=false;
  $("sgno").onclick=closeSheet;$("sgok").onclick=()=>{const v=$("sgn").value;if(!v)return toast("Scegli un nome");r.apprBy=v;S.lastSigner=v;closeSheet();save();cb()}}
 async function makePdf(r){
-  if(!window.jspdf)return toast("Generatore PDF non disponibile in questa vista");
+  try{await needPdf()}catch(e){return toast("Generatore PDF non disponibile: controlla la connessione")}
   if(!r.apprBy){if(me&&person(me)&&r.pid!==me){r.apprBy=person(me).name;save()}else if(!me&&!ro)return pickSigner(r,()=>makePdf(r));else return toast("Firma del responsabile non disponibile")}
   const p=person(r.pid),doc=new window.jspdf.jsPDF({unit:"mm",format:"a4"}),W=210;
   const dl=d=>D(d).toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
@@ -1151,7 +1153,7 @@ async function doExport(){
  const base=`ergotech_${EX.cont==="ass"?"assenze":"turni"}_${days[0]}_${days[days.length-1]}`;
  let blob,name;
  if(EX.fmt==="xlsx"){
-  if(!window.XLSX)return toast("Generatore Excel non disponibile in questa vista");
+  try{await needXlsx()}catch(e){return toast("Generatore Excel non disponibile: controlla la connessione")}
   const wb=XLSX.utils.book_new();let aoa;
   if(EX.cont==="ass"){aoa=[["Persona","Reparto","Data","Tipo","Ore","Stato"],...assRows(P,days).map(r=>[r[0],r[1],D(r[2]),r[3],r[4]===""?null:r[4],r[5]])]}
   else{aoa=[["Reparto","Persona",...days.map(d=>D(d))],...P.map(p=>[repName(p.rep),p.name,...days.map(d=>{const t=cellOf(p,d).txt;return t==="·"?"":t})])]}
@@ -1160,7 +1162,7 @@ async function doExport(){
   if(EX.cont!=="ass")XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["Codice","Significato"],...Object.entries(LAB).map(([k,v])=>[k==="R"?"(vuoto)":k,v]),["EA/UA","Ingresso/uscita anticipati"],["+n","Ore di straordinario"]]),"Legenda");
   blob=new Blob([XLSX.write(wb,{type:"array",bookType:"xlsx"})],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});name=base+".xlsx";
  }else{
-  if(!window.jspdf||!window.jspdf.jsPDF.API.autoTable)return toast("Generatore PDF non disponibile in questa vista");
+  try{await needPdf()}catch(e){return toast("Generatore PDF non disponibile: controlla la connessione")}
   const land=EX.cont!=="ass",doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:land?"landscape":"portrait"}),W=land?297:210;
   const head=(t)=>{try{doc.addImage(LOGO_N,"PNG",12,8,24.3,6)}catch(e){}doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(21,39,79);doc.text(t,40,13);doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(90);doc.text(repL+" · generato il "+new Date().toLocaleDateString("it-IT"),W-12,13,{align:"right"});doc.setTextColor(0)};
   if(EX.cont==="ass"){head("Permessi e assenze · "+perL);const rows=assRows(P,days);
