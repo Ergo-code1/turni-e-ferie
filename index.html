@@ -425,7 +425,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.3.3",APP_REV_DATE="06/11/2026";
+const APP_REV="15.4.0",APP_REV_DATE="06/11/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -460,6 +460,12 @@ const KEY="turniferie-v4";
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 if(!S||!S.versions)S=DEMO();if(Array.isArray(S.people))S.people.sort(pOrd);
 const isAutoRep=r=>!!(r&&(r.versions||[]).some(v=>v&&v.auto));
+// Data di inizio dell'app: prima non si mostra, non si conta e non si conserva nulla
+const APP0="2026-10-01",APP0Y=2026,APP0M=9,beforeApp=(y,m)=>y<APP0Y||(y===APP0Y&&m<APP0M);
+function cleanBefore0(){let ch=false;if(!S)return false;
+ if(Array.isArray(S.reqs))S.reqs=S.reqs.filter(r=>{const d=(r.days||[]).filter(x=>x>=APP0);if(d.length!==(r.days||[]).length){ch=true;r.days=d}return d.length>0});
+ for(const o of [S.ov,S.hist])if(o)for(const k of Object.keys(o))if(k.slice(k.indexOf("|")+1)<APP0){delete o[k];ch=true}
+ return ch}
 function normS(){
 if(S&&Array.isArray(S.reqs))S.reqs=S.reqs.filter(r=>r.st!=="no");
 let mig=false;
@@ -483,6 +489,7 @@ if(!S.log)S.log=[];if(S.levels[0]==="Manutentore")S.levels[0]="Operatore";if(!S.
 if(!S.accSeed){const a=S.people.find(p=>p.name==="Anna Rossi"),l=S.people.find(p=>p.name==="Luca Bianchi"),g=S.people.find(p=>p.name==="Sara Conti");if(a&&!a.acc)a.acc={user:"anna.rossi",must:false};if(l&&!l.acc)l.acc={user:"luca.bianchi",must:true,tmp:"Turni-4821"};if(g&&!g.acc)g.acc={user:"sara.conti",nopw:true};S.accSeed=1}
  if(!Array.isArray(S.ruleSets))S.ruleSets=[];
  S.reparti.forEach(r=>{if(isAutoRep(r)&&!S.ruleSets.some(s=>s.source==="database.db"&&(s.reps||[]).includes(r.id)))S.ruleSets.push({id:Math.max(0,...S.ruleSets.map(s=>s.id))+1,name:r.name,reps:[r.id],source:"database.db"})});
+ if(cleanBefore0()){let a=false;try{a=LOGGED==="a"}catch(e){}if(a)mig=true}
  return mig;
 }
 if(normS()){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -615,7 +622,7 @@ let LOGGED=null;
 async function pwHash(u,pw){const t="ergo|"+u+"|"+pw;
  if(window.crypto&&crypto.subtle){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
  let h=5381;for(const c of t)h=((h<<5)+h+c.charCodeAt(0))|0;return "j"+(h>>>0).toString(16)}
-function applyLogin(k){LOGGED=k;sel=[];SCRT=true;cur.y=new Date().getFullYear();cur.m=new Date().getMonth();
+function applyLogin(k){LOGGED=k;sel=[];SCRT=true;GX.a=GX.b=0;cur.y=new Date().getFullYear();cur.m=new Date().getMonth();
  if(k==="a"){me=0;ro=false}else if(k[0]==="p"){me=+k.slice(1);ro=false}else{me=0;ro=+k.slice(1)}
  const adm=k==="a";$("whol").hidden=!adm;$("whoname").hidden=adm;
  $("whoname").textContent=adm?"":(k[0]==="p"?person(me).name:(S.viewers.find(v=>v.id===ro)||{}).name||"");
@@ -673,14 +680,24 @@ function loginGate(){fixCodes();if(LOGGED)return;if(FBM&&TFD.kind==="firebase")r
 // Ordine persone: prima chi è stato spostato a mano (campo ord, salvato e sincronizzato), poi alfabetico per cognome
 function pOrd(a,b){const sn=n=>{const x=String(n||"").trim().split(/\s+/);return x.length>1?x.slice(1).join(" ")+" "+x[0]:x[0]||""};return (a.ord??1e9)-(b.ord??1e9)||sn(a.name).localeCompare(sn(b.name),"it")||a.id-b.id}
 const FBV=2,ymOf=d=>String(d||"0000-00").slice(0,7);
-const C={cfg:null,per:{},reg:{},rq:{},ov:{}},ARC={},ARCL={};
+// v3: ferie e turni in ACOL/{rep}_{aq} {rep,anno,aq,r:{id:richiesta},o:{"pid|data":turno}}, aq=anno*10+trimestre
+const ACOL="trimestri",AV3=ACOL+"/_v";
+const C={cfg:null,per:{},reg:{},an:{}},ARC={},ARCL={},OUT={},OUTL={};
+// Finestra caricata all'avvio: da 2 mesi fa a 13 mesi avanti (anni interi); anno 0 = richieste senza data
+const qOf=d=>{const y=+String(d||"").slice(0,4),m=+String(d||"").slice(5,7)||1;return y?y*10+Math.ceil(m/3):0};
+// Finestra caricata all'avvio: trimestri da 1 mese prima a 6 mesi avanti; 0 = richieste senza data
+const winQ=()=>{const n=new Date(),a=new Date(n.getFullYear(),n.getMonth()-1,1),b=new Date(n.getFullYear(),n.getMonth()+6,1),qs=[0];for(let d=new Date(a.getFullYear(),Math.floor(a.getMonth()/3)*3,1);d<=b;d.setMonth(d.getMonth()+3))qs.push(d.getFullYear()*10+Math.floor(d.getMonth()/3)+1);return qs};
+let WQ=winQ(),OUTA=new Set();
+// Griglia Persone: 1 mese prima + mese scelto + 6 dopo; GX.b/GX.a = mesi aggiunti con −1/+1 (massimo 12 in tutto)
+const GX={b:0,a:0},GMAX=12,gMons=()=>{const n=8+GX.b+GX.a,s0=cur.m-1-GX.b,out=[];for(let k=0;k<n;k++){const t=s0+k,yy=cur.y+Math.floor(t/12),mm=((t%12)+12)%12;if(!beforeApp(yy,mm))out.push([yy,mm])}return out};
+const outOf=(st,y)=>{const a=arcOf(st,y);a.reqs=a.reqs.filter(r=>!WQ.includes(qOf(ymOf(r.days&&r.days[0]))));a.ov=Object.fromEntries(Object.entries(a.ov).filter(([k])=>!WQ.includes(qOf(k.slice(k.indexOf("|")+1)))));return a};
 const FPth=f=>new firebase.firestore.FieldPath(...f);
 function fbUnits(st){const U={},pr=new Map((st.people||[]).map(p=>[p.id,p.rep||0])),arc=new Set(st.archivi||[]);
  const put=(doc,f,v,meta)=>{U[doc+"#"+f.join("\u0001")]={doc,f,v,meta}};
  Object.keys(st).forEach(k=>{if(!["people","reqs","ov","ruleSets"].includes(k)&&st[k]!==undefined)put("turniferie/config",[k],st[k],null)});
  (st.people||[]).forEach((p,i)=>put("persone/"+(p.rep||0),["p",String(p.id)],p,{rep:p.rep||0}));
- (st.reqs||[]).forEach(r=>{const m=ymOf(r.days&&r.days[0]),y=+m.slice(0,4),rep=pr.get(r.pid)||0;put((arc.has(y)?"archivio_rq/":"rq/")+rep+"_"+m,["r",String(r.id)],r,{rep,anno:y,mese:m})});
- Object.entries(st.ov||{}).forEach(([k,v])=>{const i=k.indexOf("|"),m=ymOf(k.slice(i+1)),y=+m.slice(0,4),rep=pr.get(+k.slice(0,i))||0;put((arc.has(y)?"archivio_ov/":"ov/")+rep+"_"+m,["o",k],v,{rep,anno:y,mese:m})});
+ (st.reqs||[]).forEach(r=>{const m=ymOf(r.days&&r.days[0]),y=+m.slice(0,4),rep=pr.get(r.pid)||0;if(arc.has(y))put("archivio_rq/"+rep+"_"+m,["r",String(r.id)],r,{rep,anno:y,mese:m});else{const aq=qOf(m);put(ACOL+"/"+rep+"_"+aq,["r",String(r.id)],r,{rep,anno:y,aq})}});
+ Object.entries(st.ov||{}).forEach(([k,v])=>{const i=k.indexOf("|"),m=ymOf(k.slice(i+1)),y=+m.slice(0,4),rep=pr.get(+k.slice(0,i))||0;if(arc.has(y))put("archivio_ov/"+rep+"_"+m,["o",k],v,{rep,anno:y,mese:m});else{const aq=qOf(m);put(ACOL+"/"+rep+"_"+aq,["o",k],v,{rep,anno:y,aq})}});
  (st.ruleSets||[]).forEach(s=>put("regole/"+s.id,["d"],s,null));
  return U}
 const fbSigOf=st=>Object.fromEntries(Object.entries(fbUnits(st)).map(([k,u])=>[k,JSON.stringify(canon(u.v))]));
@@ -697,12 +714,13 @@ async function fbWrite(st){
   for(let i=0;i<pairs.length;i+=2000){const part=pairs.slice(i,i+2000);ops.push(b=>b.update(ref,...part))}}
  for(let i=0;i<ops.length;i+=400){const b=db.batch();ops.slice(i,i+400).forEach(o=>o(b));await b.commit()}
  TFD.sig=newSig;
- Object.keys(ARC).forEach(y=>{ARC[y]=arcOf(st,+y)});
+ Object.keys(ARC).forEach(y=>{ARC[y]=arcOf(st,+y)});Object.keys(OUT).forEach(y=>{if(OUTA.has(y))OUT[y]=outOf(st,+y)});
 }
 const arcOf=(st,y)=>({reqs:(st.reqs||[]).filter(r=>+ymOf(r.days&&r.days[0]).slice(0,4)===y),ov:Object.fromEntries(Object.entries(st.ov||{}).filter(([k])=>+k.slice(k.indexOf("|")+1,k.indexOf("|")+5)===y))});
 function fbAssemble(){const st=JSON.parse(JSON.stringify(C.cfg||{}));
  st.people=Object.values(C.per).flatMap(d=>Object.values(d.p||{})).map(p=>{delete p._o;return p}).sort(pOrd);
- st.reqs=Object.values(C.rq).flatMap(d=>Object.values(d.r||{}));st.ov={};Object.values(C.ov).forEach(d=>Object.assign(st.ov,d.o||{}));
+ st.reqs=Object.values(C.an).flatMap(d=>Object.values(d.r||{}));st.ov={};Object.values(C.an).forEach(d=>Object.assign(st.ov,d.o||{}));
+ Object.entries(OUT).forEach(([y,a])=>{if((st.archivi||[]).includes(+y))return;st.reqs.push(...JSON.parse(JSON.stringify(a.reqs)));Object.assign(st.ov,a.ov)});
  const ay=new Set(st.archivi||[]);Object.entries(ARC).forEach(([y,a])=>{if(!ay.has(+y))return;st.reqs.push(...JSON.parse(JSON.stringify(a.reqs)));Object.assign(st.ov,a.ov)});
  st.reqs.sort((a,b)=>a.id-b.id);
  st.ruleSets=Object.values(C.reg).map(d=>d.d).filter(Boolean).sort((a,b)=>a.id-b.id);
@@ -720,6 +738,18 @@ function fbListen(col,box,reps){const db=TFD.fb.db,offs=[],firsts=[];
   const off=x.onSnapshot(sn=>{snapInto(box,sn);if(f){f=false;res()}else fbApplySoon()},e=>{if(f){f=false;res()}});
   offs.push(off)}))});
  return {off:()=>offs.forEach(o=>o()),ready:Promise.all(firsts)}}
+function anQ(qs,reps){const db=TFD.fb.db,q=[];qs.forEach(aq=>{const b=db.collection(ACOL).where("aq","==",aq);if(reps===null)q.push(b);else for(let i=0;i<reps.length;i+=30)q.push(b.where("rep","in",reps.slice(i,i+30)))});return q}
+function fbListenAn(box,reps){const offs=[],firsts=[];
+ anQ(WQ,reps).forEach(x=>{firsts.push(new Promise(res=>{let f=true;
+  offs.push(x.onSnapshot(sn=>{snapInto(box,sn);if(f){f=false;res()}else fbApplySoon()},e=>{if(f){f=false;res()}}))}))});
+ return {off:()=>offs.forEach(o=>o()),ready:Promise.all(firsts)}}
+// Copia una tantum dalla struttura per mese (rq, ov) a quella per anno: le raccolte vecchie restano intatte
+async function fbMigV3(){const db=TFD.fb.db,[a,b]=await Promise.all([db.collection("rq").get(),db.collection("ov").get()]);
+ const st=fbAssemble();st.reqs=[];st.ov={};a.docs.forEach(d=>st.reqs.push(...Object.values(d.data().r||{})));b.docs.forEach(d=>Object.assign(st.ov,d.data().o||{}));
+ const U=fbUnits(st),by=new Map();Object.values(U).forEach(u=>{if(!u.doc.startsWith(ACOL+"/"))return;const x=by.get(u.doc)||(by.set(u.doc,{meta:u.meta,p:[]}),by.get(u.doc));x.p.push(FPth(u.f),u.v)});
+ const ops=[];for(const [d,x] of by){const ref=db.doc(d);ops.push(w=>w.set(ref,x.meta,{merge:true}));for(let i=0;i<x.p.length;i+=2000){const part=x.p.slice(i,i+2000);ops.push(w=>w.update(ref,...part))}}
+ for(let i=0;i<ops.length;i+=400){const w=db.batch();ops.slice(i,i+400).forEach(o=>o(w));await w.commit()}
+ await db.doc(AV3).set({v:3,docs:by.size,quando:firebase.firestore.FieldValue.serverTimestamp()})}
 let FBL={};
 // Accessi dei visualizzatori: 2 piccole scritture per apertura (una per scheda del browser), lette solo dall'admin a richiesta
 function trackViewer(){try{const w=TFD.who;if(!w||!w.vid)return;const k="tf-acc-"+todayIso+"-"+w.vid;try{if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,"1")}catch(e){}
@@ -737,26 +767,29 @@ async function loadAcc(){const el=$("vacc");if(!el)return;if(me||ro){el.innerHTM
 async function fbStart(){const db=TFD.fb.db;TFD.who=await fbWho();trackViewer();
  if(!TFD.who){const e=new Error("utente non abilitato");e.code="permission-denied";throw e}
  const adm=TFD.who.user==="admin";
- const cfg=await db.doc("turniferie/config").get();
+ let cfg=null;await new Promise((res,rej)=>{let f=true;db.doc("turniferie/config").onSnapshot(sn=>{if(sn.exists)C.cfg=sn.data();if(f){f=false;cfg=sn;res()}else fbApplySoon()},e=>{if(f){f=false;rej(e)}})});
  if(!cfg.exists||(cfg.data().dataV||0)<FBV){
   if(!adm){const e=new Error("dati da aggiornare");e.code="tf-migrate";throw e}
   const old=cfg.exists?await fbReadV1():null;
   if(old){S=old}normS();S.dataV=FBV;TFD.sig={};await fbWrite(S);
   if(old){const b=db.batch();["turniferie/persone","turniferie/richieste","turniferie/ping"].forEach(p=>b.delete(db.doc(p)));(TFD.paths||[]).filter(p=>p.startsWith("reparti/")).forEach(p=>b.delete(db.doc(p)));try{await b.commit()}catch(e){}}
  }
- const offC=db.doc("turniferie/config").onSnapshot(sn=>{C.cfg=sn.data()||C.cfg;fbApplySoon()},()=>{});
- C.cfg=(await db.doc("turniferie/config").get()).data();
+ if(!C.cfg)C.cfg=(await db.doc("turniferie/config").get()).data();
  FBL.per=fbListen("persone",C.per,null);FBL.reg=fbListen("regole",C.reg,null);
  await Promise.all([FBL.per.ready,FBL.reg.ready]);
- TFD.reps=fbReps();FBL.rq=fbListen("rq",C.rq,TFD.reps);FBL.ov=fbListen("ov",C.ov,TFD.reps);
- await Promise.all([FBL.rq.ready,FBL.ov.ready]);
+ const mk=await db.doc(AV3).get();if(!mk.exists){if(!adm){const e=new Error("dati da aggiornare");e.code="tf-migrate";throw e}toast("Prima apertura: copio ferie e turni nella nuova struttura…");await fbMigV3()}
+ if(adm&&!(mk.exists&&mk.data().app0===APP0)){const q0=APP0Y*10+Math.floor(APP0M/3)+1,old=await db.collection(ACOL).where("aq",">",0).where("aq","<",q0).get();
+  for(let i=0;i<old.docs.length;i+=400){const w=db.batch();old.docs.slice(i,i+400).forEach(d=>w.delete(d.ref));await w.commit()}
+  await db.doc(AV3).set({app0:APP0},{merge:true})}
+ TFD.reps=fbReps();WQ=winQ();FBL.an=fbListenAn(C.an,TFD.reps);
+ await FBL.an.ready;
  const st=fbAssemble();TFD.sig=fbSigOf(st);TFD.live=true;return st}
 let FBA=0;
 function fbApplySoon(){if(!TFD.live)return;clearTimeout(FBA);FBA=setTimeout(fbApply,120)}
 function fbApply(){if(!TFD.live)return;if(TFD.dirty||TFD.busy){TFD.needApply=true;return}TFD.needApply=false;
  const st=fbAssemble();if(!Array.isArray(st.reparti)||!Array.isArray(st.people))return;
- TFD.sig=fbSigOf(st);S=st;const mg=normS();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
- const nr=fbReps();if(JSON.stringify(nr)!==JSON.stringify(TFD.reps)){TFD.reps=nr;["rq","ov"].forEach(k=>{FBL[k].off();Object.keys(C[k]).forEach(i=>delete C[k][i]);FBL[k]=fbListen(k,C[k],nr)})}
+ TFD.sig=fbSigOf(st);S=st;OUTA=new Set(Object.keys(OUT));const mg=normS();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+ const nr=fbReps();if(JSON.stringify(nr)!==JSON.stringify(TFD.reps)){TFD.reps=nr;FBL.an.off();Object.keys(C.an).forEach(i=>delete C.an[i]);Object.keys(OUT).forEach(y=>delete OUT[y]);FBL.an=fbListenAn(C.an,nr)}
  if(LOGGED&&!validKey(LOGGED)){doLogout();return}
  fillWho();render();if(mg)save()}
 // Anni archiviati: non caricati all'apertura, scaricati quando servono
@@ -766,12 +799,20 @@ const oreOk=()=>{if(!me&&!ro)return true;if(me&&person(me))return true;return (S
 const annoOk=()=>!me||lvl(person(me))>=2||!!planR();
 const oreOwn=()=>!!me&&!(S.oreSee||[]).includes("p"+me);
 const isArc=y=>FBM&&TFD.kind==="firebase"&&(S.archivi||[]).includes(+y);
-async function ensureYear(y){y=+y;if(!isArc(y)||ARC[y])return;if(ARCL[y])return ARCL[y];
+const outQ=y=>[1,2,3,4].map(q=>+y*10+q).filter(aq=>!WQ.includes(aq));
+const isOut=y=>FBM&&TFD.kind==="firebase"&&!!TFD.live&&+y>0&&!isArc(y)&&outQ(y).length>0;
+async function ensureYear(y){y=+y;
+ if(isOut(y)){if(OUT[y])return;if(OUTL[y])return OUTL[y];
+  OUTL[y]=(async()=>{const a={reqs:[],ov:{}};for(const q of anQ(outQ(y),TFD.reps)){const sn=await q.get();sn.docs.forEach(d=>{const x=d.data();a.reqs.push(...Object.values(x.r||{}));Object.assign(a.ov,x.o||{})})}
+   OUT[y]=a;delete OUTL[y];fbApply()})();return OUTL[y]}
+ if(!isArc(y)||ARC[y])return;if(ARCL[y])return ARCL[y];
  ARCL[y]=(async()=>{const db=TFD.fb.db,a={reqs:[],ov:{}};
   const [q1,q2]=await Promise.all([db.collection("archivio_rq").where("anno","==",y).get(),db.collection("archivio_ov").where("anno","==",y).get()]);
   q1.docs.forEach(d=>a.reqs.push(...Object.values(d.data().r||{})));q2.docs.forEach(d=>Object.assign(a.ov,d.data().o||{}));
   ARC[y]=a;delete ARCL[y];fbApply()})();return ARCL[y]}
-function arcYearsNeeded(){const ys=new Set([cur.y]);if(tab==="ore")ys.add(oy);return [...ys].filter(isArc)}
+function arcYearsNeeded(){const ys=new Set();if(tab==="ore")ys.add(oy);if(tab==="mese")ys.add(cur.y);
+ for(const [yy,mm] of gMons()){if(isArc(yy)||!WQ.includes(yy*10+Math.floor(mm/3)+1))ys.add(yy)}
+ return [...ys].filter(y=>isArc(y)||isOut(y))}
 async function archiveYear(y,on){y=+y;if(on){if(y>=new Date().getFullYear())return toast("Si possono archiviare solo gli anni chiusi");ARC[y]=arcOf(S,y);S.archivi=[...new Set([...(S.archivi||[]),y])].sort()}
  else{await ensureYear(y);S.archivi=(S.archivi||[]).filter(x=>x!==y);delete ARC[y]}
  save();toast(on?"Anno "+y+" archiviato":"Anno "+y+" riportato tra i dati attivi");render()}
@@ -795,7 +836,7 @@ async function tfBoot(){
 let oy=new Date().getFullYear();
 function totals(p,Y){
   const o={lav:0,fer:0,mal:0,l104:0,rc:0,pend:0,ea:0,st:0,sw:0,ds:0,co:0,tr:0,cm:0};
-  for(let d=iso(Y,0,1),e=iso(Y+1,0,1);d<e;d=add(d,1)){
+  for(let d=iso(Y,0,1)<APP0?APP0:iso(Y,0,1),e=iso(Y+1,0,1);d<e;d=add(d,1)){
     const s=shift(p,d),r=reqOf(p.id,d),nof=isWe(d)||S.fest.includes(d);
     if(nof&&(s==="F"||(r&&r.tipo==="F")))continue; // ferie su sabato, domenica o festivo: non contano
     if(s==="MA")o.mal+=1;else if(s==="L")o.l104+=8;else if(s==="F")o.fer+=8;else if(s==="DS")o.ds++;else if(s==="SW")o.sw++;else if(s==="CO")o.co++;else if(s==="TR")o.tr++;else if(s==="CM")o.cm++;
@@ -879,7 +920,7 @@ function rcDay(p,day){
 }
 function plan(p,day){return rcDay(p,day)?"R":plan0(p,day)}
 const hOf=k=>S.hist&&S.hist[k];
-const shift=(p,day)=>{const k=p.id+"|"+day,o=S.ov[k]||hOf(k);return o==="RC"?"R":o||plan(p,day)}
+const shift=(p,day)=>{if(day<APP0)return "";const k=p.id+"|"+day,o=S.ov[k]||hOf(k);return o==="RC"?"R":o||plan(p,day)}
 // Niente effetti sul passato: prima di una modifica alla pianificazione (giro, profilo, regole) salva in S.hist
 // i turni dei giorni passati (da inizio anno precedente a ieri) che la modifica cambierebbe
 // Annulla: prima di ogni modifica su una sola persona salvo com'era (piano, giro, regole, cambi, storico dei giorni passati)
@@ -889,7 +930,7 @@ function undoP(id){const p=person(id),st=UNDO[id];if(!p||!st||!st.length)return;
  UF.forEach(k=>{if(u.f[k]===undefined)delete p[k];else p[k]=u.f[k]});for(const k of Object.keys(S.hist))if(k.startsWith(pre)&&!(k in u.h))delete S.hist[k];Object.assign(S.hist,u.h);clrPC();
  logIt(id,"ultima modifica annullata");save();toast("Modifica annullata: "+p.name.split(" ")[0]+" è tornato com'era");render()}
 const undoBtn=p=>(UNDO[p.id]||[]).length?`<button data-undo="${p.id}" style="margin-top:6px">↶ Annulla l'ultima modifica (${UNDO[p.id].length})</button>`:"";
-function freezePast(ppl,fn){if(ppl.length===1&&ppl[0])snapP(ppl[0]);const T=todayIso,st=iso(new Date().getFullYear()-1,0,1),old=new Map(),cur=p=>d=>rcDay(p,d)?"RC":plan0(p,d);
+function freezePast(ppl,fn){if(ppl.length===1&&ppl[0])snapP(ppl[0]);const T=todayIso,st=iso(new Date().getFullYear()-1,0,1)<APP0?APP0:iso(new Date().getFullYear()-1,0,1),old=new Map(),cur=p=>d=>rcDay(p,d)?"RC":plan0(p,d);
   clrPC();for(const p of ppl){const c=cur(p);for(let d=st;d<T;d=add(d,1)){const k=p.id+"|"+d;if(S.ov[k]||hOf(k))continue;old.set(k,c(d))}}
   fn();clrPC();let n=0;
   for(const [k,v] of old){const i=k.indexOf("|"),p=person(+k.slice(0,i));if(!p)continue;const d=k.slice(i+1);if((rcDay(p,d)?"RC":plan0(p,d))!==v){S.hist[k]=v;n++}}
@@ -1006,8 +1047,8 @@ $("accb").onclick=()=>{const u=TFD.fb&&TFD.fb.auth.currentUser;if(!u)return;cons
 fillWho();
 function confirm2(b,fn){if(b.dataset.c){fn()}else{b.dataset.c=1;const t=b.textContent;b.textContent="Conferma?";setTimeout(()=>{if(b.isConnected){delete b.dataset.c;b.textContent=t}},3000)}}
 $("who").onchange=e=>{const v=e.target.value;me=v[0]==="p"?+v.slice(1):0;ro=v[0]==="v"?+v.slice(1):false;sel=[];if(!canSet()&&(tab==="imp"||tab==="turni"))tab="persone";closeSheet();render()};
-$("prev").onclick=()=>{cur.m--;if(cur.m<0){cur.m=11;cur.y--}if(!me)closeSheet();render()};
-$("next").onclick=()=>{cur.m++;if(cur.m>11){cur.m=0;cur.y++}if(!me)closeSheet();render()};
+$("prev").onclick=()=>{if(!beforeApp(cur.y,cur.m)&&beforeApp(cur.y+(cur.m===0?-1:0),(cur.m+11)%12))return toast("L'app parte da ottobre "+APP0Y);GX.a=GX.b=0;cur.m--;if(cur.m<0){cur.m=11;cur.y--}if(!me)closeSheet();render()};
+$("next").onclick=()=>{GX.a=GX.b=0;cur.m++;if(cur.m>11){cur.m=0;cur.y++}if(!me)closeSheet();render()};
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;closeSheet();render()});
 function closeSheet(){$("sheet").hidden=true}
 
@@ -1149,7 +1190,7 @@ function assRows(P,days){const out=[];for(const p of P)for(const d of days){cons
 const dIt=d=>D(d).toLocaleDateString("it-IT",{weekday:"short",day:"2-digit",month:"2-digit",year:"numeric"});
 const PCOL={M:[207,226,251],P:[251,224,176],N:[217,208,247],G:[201,234,214],SV:[205,238,233],CO:[255,240,194],TR:[230,233,239],BD:[255,236,179],CM:[251,227,239],F:[36,82,158],MA:[253,228,225],RC:[227,231,226],L:[223,241,243],SW:[232,240,214],DS:[251,227,239]};
 async function doExport(){
- const days=expDays();if(!days)return;{const ys=[...new Set(days.map(d=>+d.slice(0,4)))].filter(isArc);if(ys.length){toast("Carico gli anni archiviati…");await Promise.all(ys.map(ensureYear))}}const P=expPeople();if(!P.length)return toast("Nessuna persona a turni in questo reparto");
+ const days=expDays();if(!days)return;{const ys=[...new Set(days.map(d=>+d.slice(0,4)))].filter(y=>isArc(y)||isOut(y));if(ys.length){toast("Carico gli anni archiviati…");await Promise.all(ys.map(ensureYear))}}const P=expPeople();if(!P.length)return toast("Nessuna persona a turni in questo reparto");
  if(EX.dest==="mail"&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(EX.mail))return toast("Scrivi un indirizzo email valido");
  const repL=+EX.rep?repName(+EX.rep):"tutti i reparti",perL=days.length>1?fmt(days[0])+" – "+fmt(days[days.length-1])+" "+days[days.length-1].slice(0,4):fmt(days[0]);
  const base=`ergotech_${EX.cont==="ass"?"assenze":"turni"}_${days[0]}_${days[days.length-1]}`;
@@ -1239,9 +1280,9 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
 
   if(tab==="persone"){const gp=GPATCH;GPATCH=null;
     const days=[],mons=[];
-    for(let k=0;k<12;k++){const yy=y+Math.floor((m+k)/12),mm=(m+k)%12,nn=new Date(yy,mm+1,0).getDate();mons.push([yy,mm,nn]);for(let d=1;d<=nn;d++)days.push(iso(yy,mm,d))}
+    for(const [yy,mm] of gMons()){const nn=new Date(yy,mm+1,0).getDate();mons.push([yy,mm,nn]);for(let d=1;d<=nn;d++)days.push(iso(yy,mm,d))}
     const ms=day=>day.endsWith("-01")?" ms":"";
-    let h='<tr><th class="name" rowspan="2">Persona<span id="gmon" class="gmon"></span></th>'+mons.map(([yy,mm,nn])=>`<th class="mh ms" colspan="${nn}">${new Date(yy,mm,1).toLocaleDateString("it-IT",{month:"long",year:"numeric"})}</th>`).join("")+"</tr><tr>";
+    let h='<tr><th class="name" rowspan="2">Persona<span id="gmon" class="gmon"></span></th>'+mons.map(([yy,mm,nn],i)=>`<th class="mh ms" colspan="${nn}"><div style="display:flex;align-items:center;gap:8px">${i===0&&mons.length<GMAX&&!beforeApp(yy+(mm===0?-1:0),(mm+11)%12)?`<button class="ghost gx" data-gx="b" style="padding:2px 8px;font-size:12px">−1 mese</button>`:""}<span>${new Date(yy,mm,1).toLocaleDateString("it-IT",{month:"long",year:"numeric"})}</span>${i===mons.length-1&&mons.length<GMAX?`<button class="ghost gx" data-gx="a" style="margin-left:auto;padding:2px 8px;font-size:12px">+1 mese</button>`:""}</div></th>`).join("")+"</tr><tr>";
     for(const day of days){const w=D(day).getDay();h+=`<th class="${S.fest.includes(day)?"fest":w%6===0?"we":""}${ms(day)}${day===todayIso?" tdh":""}"${day===todayIso?' id="tdh"':""} data-hd="${day}">${"DLMMGVS"[w]}<br>${+day.slice(8)}</th>`}
     h+="</tr>";
     const VA=vis(),GR0=repsOf(VA).filter(r=>r.id!==-1);if(grSel)grSel=grSel.filter(id=>GR0.some(r=>r.id===id));if(grSel&&!grSel.length)grSel=null;
@@ -1270,7 +1311,10 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
       h+="</tr>";
     });
     }
-    const sc=$("grid").parentElement,keep=sc.scrollLeft;$("grid").innerHTML=h;sc.scrollLeft=keep;sc.onscroll=gMon;gMon()}
+    const sc=$("grid").parentElement,keep=sc.scrollLeft;$("grid").innerHTML=h;sc.scrollLeft=keep;sc.onscroll=gMon;gMon();
+    $("grid").querySelectorAll("[data-gx]").forEach(bt=>bt.onclick=e=>{e.stopPropagation();const k=bt.dataset.gx,f=$("grid").querySelector("th[data-hd]"),d0=f&&f.dataset.hd;
+     if(gMons().length>=GMAX)return;GX[k]++;render();
+     if(k==="b"&&d0){const th=$("grid").querySelector(`th[data-hd="${d0}"]`),nm=$("grid").querySelector("th.name");if(th)sc.scrollLeft=Math.max(0,th.offsetLeft-(nm?nm.offsetWidth:0)-4)}})}
     $("grid").onmouseover=ev=>{const td=ev.target.closest("td[data-d]");if(!td||td.title)return;const p=person(+td.dataset.p);if(p)td.title=`${p.name} · ${fmt(td.dataset.d)} · ${LAB[shift(p,td.dataset.d)]||""}`};
     $("grid").onclick=ev=>{const td=ev.target.closest("td.click");if(!td)return;
       const p=person(+td.dataset.p),day=td.dataset.d;
@@ -1314,7 +1358,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     if($("yrall"))$("yrall").onclick=()=>{yrSel=null;render()};
     const YV=vis().filter(p=>yOn(p.rep));
     for(let k=0;k<12;k++){
-      const yy=y+Math.floor((m+k)/12),mm=(m+k)%12,nn=new Date(yy,mm+1,0).getDate();
+      const yy=y+Math.floor((m+k)/12),mm=(m+k)%12,nn=new Date(yy,mm+1,0).getDate();if(beforeApp(yy,mm))continue;
       let c="LMMGVSD".split("").map(x=>`<div class="h">${x}</div>`).join("");
       c+="<div></div>".repeat((new Date(yy,mm,1).getDay()+6)%7);
       for(let d=1;d<=nn;d++){
@@ -1335,7 +1379,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
 
   if(tab==="ore"){
     const Y=oy;$("ylab").textContent=Y;
-    $("yprev").onclick=()=>{oy--;render()};$("ynext").onclick=()=>{oy++;render()};
+    $("yprev").onclick=()=>{if(oy<=APP0Y)return toast("L'app parte da ottobre "+APP0Y);oy--;render()};$("ynext").onclick=()=>{oy++;render()};
     if(oreOwn()){const p=person(me),t=totals(p,Y),f=v=>v?(+v.toFixed(2)).toLocaleString("it-IT"):"–",K=["fer","pend","mal","l104","ea","st","sw","ds","co","tr","cm"];
       $("otitle").textContent="Le mie ore";$("orereps").innerHTML="";
       $("ore").innerHTML=`<tr><th class="name">Persona</th><th>Ferie e permessi (h)</th><th>In approvazione (h)</th><th>Malattia (gg)</th><th>104 (h)</th><th>Ingr./usc. anticipati (h)</th><th>Straordinari (h)</th><th>Smart working (gg)</th><th>Donazioni (gg)</th><th>Corsi (gg)</th><th>Trasferte (gg)</th><th>Congedo matr. (gg)</th><th>Monte ferie (h)</th><th>Residuo (h)</th></tr><tr><td class="name">${p.name}</td>${K.map(k=>`<td>${f(t[k])}</td>`).join("")}${(()=>{const mo=(p.monte||{})[Y],res=mo==null?null:mo-t.fer;return `<td>${mo??"–"}</td><td class="${res<0?"neg":""}">${res==null?"–":res.toLocaleString("it-IT")}</td>`})()}</tr>`;
