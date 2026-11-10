@@ -2,6 +2,14 @@
 <html lang="it"><head><meta charset="utf-8"><script>try{var t=localStorage.getItem("tf-theme")||"light";if(t!=="auto")document.documentElement.setAttribute("data-theme",t)}catch(e){document.documentElement.setAttribute("data-theme","light")}</script><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}*,*::before,*::after{box-sizing:inherit}.c.AS{background:#3b82f6!important;color:#fff!important;font-weight:700}
 .legend span.as::before{content:"X";background:#3b82f6;color:#fff;border-radius:3px!important;font-size:9px;font-weight:700;text-align:center;line-height:11px}
+/*aree*/tr.area td{padding:8px 0 3px 8px!important;background:none!important;border:0!important;text-align:left!important}
+tr.area .arn{position:sticky;left:8px}
+.arn{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ac)}
+.arn::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--ac)}
+td.name.har{box-shadow:inset 4px 0 0 var(--ac),6px 0 8px -6px rgb(0 0 0/.15)!important;padding-left:12px!important}
+.archip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:99px;padding:2px 4px 2px 8px;font-size:12px}
+.archip i{width:10px;height:10px;border-radius:3px;background:var(--ac)}
+.archip input{border:0;background:none;padding:2px;width:auto;min-width:60px;font-size:12px}
 </style>
 <title>Turni e Ferie</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -304,6 +312,14 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.busy::before{animation:none}}
 @media (max-width:700px){.rrow{grid-template-columns:1fr}#msgrid th.name,#msgrid td.name{max-width:78px;padding:0 5px;font-size:11.5px}#msgrid th,#msgrid td{min-width:25px;height:28px}#msgrid td.c{font-size:10px}}
+tr.area td{padding:8px 0 3px 8px!important;background:none!important;border:0!important;text-align:left!important}
+tr.area .arn{position:sticky;left:8px}
+.arn{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ac)}
+.arn::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--ac)}
+td.name.har{box-shadow:inset 4px 0 0 var(--ac),6px 0 8px -6px rgb(0 0 0/.15)!important;padding-left:12px!important}
+.archip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:99px;padding:2px 4px 2px 8px;font-size:12px}
+.archip i{width:10px;height:10px;border-radius:3px;background:var(--ac)}
+.archip input{border:0;background:none;padding:2px;width:auto;min-width:60px;font-size:12px}
 </style>
 
 </head><body>
@@ -427,7 +443,7 @@ td.cf{outline:2px solid var(--rcfg);outline-offset:-2px}
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.5.0",APP_REV_DATE="10/11/2026";
+const APP_REV="15.6.0",APP_REV_DATE="10/11/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={AS:"Assenza giustificata",MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -1034,6 +1050,9 @@ let SORT="man";try{SORT=localStorage.getItem("tf-sort")||"man"}catch(e){}
 const surn=n=>{const a=n.trim().split(/\s+/);return a.length>1?a.slice(1).join(" ")+" "+a[0]:n};
 const sortP=a=>SORT==="cogz"?[...a].sort((x,y)=>surn(y.name).localeCompare(surn(x.name),"it")):SORT==="nomz"?[...a].sort((x,y)=>y.name.localeCompare(x.name,"it")):SORT==="cog"?[...a].sort((x,y)=>surn(x.name).localeCompare(surn(y.name),"it")):SORT==="nom"?[...a].sort((x,y)=>x.name.localeCompare(y.name,"it")):SORT==="liv"?[...a].sort((x,y)=>lvl(y)-lvl(x)||S.people.indexOf(x)-S.people.indexOf(y)):a;
 const vis=()=>sortP((me?S.people.filter(p=>p.id===me||seeOf(person(me)).includes(p.rep)):repF?S.people.filter(p=>p.rep===repF):S.people).filter(inGrid).filter(p=>me||vwOk(p.rep)));
+const ACOL0=["#2563eb","#d97706","#059669","#db2777","#7c3aed","#0891b2","#65a30d","#dc2626"];
+const areasOf=rid=>((S.reparti.find(r=>r.id===rid)||{}).aree||[]);
+const areaOf=p=>areasOf(p.rep).find(a=>a.id===p.area)||null;
 const repsOf=list=>{const ids=[...new Set(list.map(p=>p.rep))];return S.reparti.filter(r=>ids.includes(r.id)).concat(ids.some(i=>!S.reparti.find(r=>r.id===i))?[{id:-1,name:"Senza reparto"}]:[])};
 
 // Raggruppa giorni consecutivi: due giorni restano nella stessa richiesta se tra loro ci sono solo riposi/festivi
@@ -1335,10 +1354,13 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     for(const rp of repsOf(V)){
     const inR=p=>rp.id===-1?!S.reparti.find(r=>r.id===p.rep):p.rep===rp.id,grp=V.filter(inR),grpA=VA.filter(inR);
     h+=`<tr class="rep"><td colspan="${days.length+1}"><span class="repn">${rp.name}</span></td></tr>`;
+    const AR=areasOf(rp.id),aix=p=>{const i=AR.findIndex(a=>a.id===p.area);return i<0?AR.length:i};let lastA=null;
+    if(AR.length)grp.sort((a,b)=>aix(a)-aix(b));
     for(const p of grp){
+      if(AR.length){const a=areaOf(p),k=a?a.id:0;if(k!==lastA){lastA=k;h+=`<tr class="area"><td colspan="${days.length+1}"><span class="arn" style="--ac:${a?a.col:"#94a3b8"}">${a?esc(a.name):"Senza area"}</span></td></tr>`}}
       const mine=p.id===me;
       const pn=p.name.trim().split(/\s+/),sn=pn.length>1?pn[0]+" "+pn[pn.length-1][0]+".":p.name;
-      h+=`<tr><td class="name" title="${p.name} · ${PROF[p.prof]}"><span class="nf">${p.name}</span><span class="ns">${sn}</span></td>`;
+      const pa=areaOf(p);h+=`<tr><td class="name${pa?" har":""}"${pa?` style="--ac:${pa.col}"`:""} title="${p.name}${pa?" · "+esc(pa.name):""} · ${PROF[p.prof]}"><span class="nf">${p.name}</span><span class="ns">${sn}</span></td>`;
       for(const day of days){const [cls,txt]=gcell(p,day);
         h+=`<td class="${cls}" data-p="${p.id}" data-d="${day}">${txt}</td>`;
       }
@@ -1532,7 +1554,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
       <header><span class="av">${ini(p.name)}</span><input id="pn${p.id}" data-n="${p.id}" value="${p.name.replace(/"/g,"&quot;")}" aria-label="Nome"><span class="lvp">${lvName(p)}</span><button class="ghost" data-up="${p.id}" aria-label="Sposta su ${p.name}" title="Sposta su">▲</button><button class="ghost" data-dn="${p.id}" aria-label="Sposta giù ${p.name}" title="Sposta giù">▼</button><button class="ghost" data-rm="${p.id}" aria-label="Togli ${p.name}">✕</button></header>
       <div class="pf">
         <label>Livello<select id="pl${p.id}" data-p="${p.id}" data-f="lvl">${opt(String(lvl(p)),Object.fromEntries(S.levels.map((n,i)=>[i+1,n]).filter(([k])=>planOnly()?+k===lvl(p):!me||k<lvl(person(me)))))}</select></label>
-        <label>Reparto<select id="pr${p.id}" data-p="${p.id}" data-f="rep">${opt(String(p.rep||0),Object.assign(hi?{0:"Nessuno"}:{},Object.fromEntries(RP().map(r=>[r.id,r.name]))))}</select></label>
+        <label>Reparto<select id="pr${p.id}" data-p="${p.id}" data-f="rep">${opt(String(p.rep||0),Object.assign(hi?{0:"Nessuno"}:{},Object.fromEntries(RP().map(r=>[r.id,r.name]))))}</select></label>${areasOf(p.rep).length?`<label>Area<select id="pa${p.id}" data-p="${p.id}" data-f="area">${opt(String(p.area||0),Object.assign({0:"—"},Object.fromEntries(areasOf(p.rep).map(a=>[a.id,a.name]))))}</select></label>`:""}
         <label class="wide">Piano turni<select id="pp${p.id}" data-p="${p.id}" data-f="prof">${opt(p.prof,hi?{...PROF0,...PROF}:PROF)}</select></label>
         ${inGrid(p)?`<label class="chk wide"><input type="checkbox" id="psw${p.id}" data-sw="${p.id}"${p.sw?" checked":""}> Può chiedere smart working</label>`:""}
       </div>
@@ -1577,8 +1599,13 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
       const old=chgAt(p,d),same=profAt(p,d)===pf&&(sx==null||giroIx(p,d)===sx);if(same)return toast("Nessuna differenza da quello che fa già in quella data");
       freezePast([p],()=>{p.chg=(p.chg||[]).filter(x=>x.from!==d);const n={from:d,prof:pf};if(sx!=null)n.s=sx;if(seg)n.seg=seg;p.chg.push(n)});
       logIt(p.id,`dal ${fmt(d)}: ${PROF[pf]||PROF0[pf]||pf}${sx!=null?", giro S"+(sx+1):""}${seg?" (come "+seg+")":""}`);save();toast("Aggiornato solo "+p.name.split(" ")[0]+" dal "+fmt(d));render()});
-    $("ppl").querySelectorAll("select[data-f]").forEach(s=>s.onchange=()=>{const p=person(+s.dataset.p);freezePast([p],()=>{p[s.dataset.f]=s.dataset.f==="prof"?s.value:+s.value;if(lvl(p)<3){if(!p.rep)p.rep=(S.reparti[0]||{}).id;if(p.prof==="none")p.prof="giornata"}});if(s.dataset.f==="rep"&&p.reps)p.reps=p.reps.filter(x=>x!==p.rep);save();fillWho();toast("Profilo aggiornato");render()});
-    $("reps").innerHTML=S.reparti.map(r=>{const n=S.people.filter(p=>p.rep===r.id).length;return `<div class="row" style="flex-wrap:nowrap;padding:4px 0"><input id="rn${r.id}" data-rn="${r.id}" value="${r.name.replace(/"/g,"&quot;")}" aria-label="Nome reparto" style="flex:1;min-width:0"><label class="chk" style="white-space:nowrap" title="Se tolto, gli utenti in sola lettura non vedono questo reparto"><input type="checkbox" data-rvw="${r.id}"${r.noVw?"":" checked"}> Visualizzatori</label><span class="muted">${n} pers.</span>${n||isAutoRep(r)?"":`<button data-rr="${r.id}" aria-label="Elimina reparto">✕</button>`}</div>`}).join("");
+    $("ppl").querySelectorAll("select[data-f]").forEach(s=>s.onchange=()=>{const p=person(+s.dataset.p);freezePast([p],()=>{p[s.dataset.f]=s.dataset.f==="prof"?s.value:+s.value;if(lvl(p)<3){if(!p.rep)p.rep=(S.reparti[0]||{}).id;if(p.prof==="none")p.prof="giornata"}});if(s.dataset.f==="rep"){delete p.area;if(p.reps)p.reps=p.reps.filter(x=>x!==p.rep)}if(s.dataset.f==="area"&&!p.area)delete p.area;save();fillWho();toast("Profilo aggiornato");render()});
+    $("reps").innerHTML=S.reparti.map(r=>{const n=S.people.filter(p=>p.rep===r.id).length;return `<div class="row" style="flex-wrap:nowrap;padding:4px 0"><input id="rn${r.id}" data-rn="${r.id}" value="${r.name.replace(/"/g,"&quot;")}" aria-label="Nome reparto" style="flex:1;min-width:0"><label class="chk" style="white-space:nowrap" title="Se tolto, gli utenti in sola lettura non vedono questo reparto"><input type="checkbox" data-rvw="${r.id}"${r.noVw?"":" checked"}> Visualizzatori</label><span class="muted">${n} pers.</span>${n||isAutoRep(r)?"":`<button data-rr="${r.id}" aria-label="Elimina reparto">✕</button>`}</div><div class="row" style="gap:6px;flex-wrap:wrap;padding:0 0 10px 6px"><span class="muted">Aree:</span>${(r.aree||[]).map(a=>`<span class="archip" style="--ac:${a.col}"><i></i><input data-arn="${r.id}_${a.id}" value="${esc(a.name)}" aria-label="Nome area" size="${Math.max(6,a.name.length)}"><button class="ghost" data-ard="${r.id}_${a.id}" aria-label="Elimina area ${esc(a.name)}">✕</button></span>`).join("")}<input data-arin="${r.id}" placeholder="Nuova area" style="width:130px"><button data-ara="${r.id}">Aggiungi</button></div>`}).join("");
+    {const RF=id=>S.reparti.find(x=>x.id===+id),AF=k=>{const [ri,ai]=k.split("_").map(Number),r=RF(ri);return [r,(r.aree||[]).find(a=>a.id===ai)]};
+     $("reps").querySelectorAll("[data-ara]").forEach(b=>b.onclick=()=>{const r=RF(b.dataset.ara),i=$("reps").querySelector(`[data-arin="${r.id}"]`),v=i.value.trim();if(!v)return toast("Scrivi il nome dell'area");r.aree=r.aree||[];if(r.aree.some(a=>a.name.toLowerCase()===v.toLowerCase()))return toast("Area già presente");const id=Math.max(0,...r.aree.map(a=>a.id))+1;r.aree.push({id,name:v,col:ACOL0[(id-1)%ACOL0.length]});save();toast("Area aggiunta a "+r.name);render()});
+     $("reps").querySelectorAll("[data-arin]").forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")$("reps").querySelector(`[data-ara="${i.dataset.arin}"]`).click()});
+     $("reps").querySelectorAll("[data-arn]").forEach(i=>i.onchange=()=>{const [r,a]=AF(i.dataset.arn);const v=i.value.trim();if(!v||!a)return toast("Il nome non può essere vuoto");a.name=v;save();toast("Area rinominata");render()});
+     $("reps").querySelectorAll("[data-ard]").forEach(b=>b.onclick=()=>confirm2(b,()=>{const [r,a]=AF(b.dataset.ard);if(!a)return;r.aree=r.aree.filter(x=>x!==a);S.people.forEach(q=>{if(q.rep===r.id&&q.area===a.id)delete q.area});if(!r.aree.length)delete r.aree;save();toast("Area eliminata");render()}))}
     $("reps").querySelectorAll("[data-rvw]").forEach(c=>c.onchange=()=>{const r=S.reparti.find(x=>x.id==c.dataset.rvw);if(c.checked)delete r.noVw;else r.noVw=true;save();toast(c.checked?r.name+": visibile ai visualizzatori":r.name+": nascosto ai visualizzatori")});
     $("reps").querySelectorAll("[data-rn]").forEach(i=>i.onchange=()=>{const v=i.value.trim();if(!v)return toast("Il nome non può essere vuoto");S.reparti.find(r=>r.id==i.dataset.rn).name=v;save();fillWho();toast("Reparto rinominato");render()});
     $("reps").querySelectorAll("[data-rr]").forEach(b=>b.onclick=()=>{S.reparti=S.reparti.filter(r=>r.id!=b.dataset.rr);save();fillWho();toast("Reparto eliminato");render()});
