@@ -443,7 +443,7 @@ td.name.har{box-shadow:inset 4px 0 0 var(--ac),6px 0 8px -6px rgb(0 0 0/.15)!imp
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.6.0",APP_REV_DATE="10/11/2026";
+const APP_REV="15.7.0",APP_REV_DATE="10/11/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={AS:"Assenza giustificata",MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -701,7 +701,7 @@ function pOrd(a,b){const sn=n=>{const x=String(n||"").trim().split(/\s+/);return
 const FBV=2,ymOf=d=>String(d||"0000-00").slice(0,7);
 // v3: ferie e turni in ACOL/{rep}_{aq} {rep,anno,aq,r:{id:richiesta},o:{"pid|data":turno}}, aq=anno*10+trimestre
 const ACOL="trimestri",AV3=ACOL+"/_v";
-const C={cfg:null,per:{},reg:{},an:{},mot:{}},ARC={},ARCL={},OUT={},OUTL={};
+const C={cfg:null,per:{},reg:{},an:{},mot:{},rg:{}},ARC={},ARCL={},OUT={},OUTL={};
 // Finestra caricata all'avvio: da 2 mesi fa a 13 mesi avanti (anni interi); anno 0 = richieste senza data
 const qOf=d=>{const y=+String(d||"").slice(0,4),m=+String(d||"").slice(5,7)||1;return y?y*10+Math.ceil(m/3):0};
 // Finestra caricata all'avvio: trimestri da 1 mese prima a 6 mesi avanti; 0 = richieste senza data
@@ -731,7 +731,7 @@ async function mGetOut(aqs){const adm=!!(TFD.who&&TFD.who.user==="admin");for(co
 function fbUnits(st){const U={},pr=new Map((st.people||[]).map(p=>[p.id,p.rep||0])),arc=new Set(st.archivi||[]);
  const put=(doc,f,v,meta)=>{U[doc+"#"+f.join("\u0001")]={doc,f,v,meta}},adm=!!(TFD.who&&TFD.who.user==="admin"),MD={};
  const mPut=(pid,rep,aq,f,v)=>{const id=pid+"_"+aq,d=MCOL+"/"+id,meta={pid,rep,aq};if(!adm){let l=mLet(st,pid,rep);const me0=TFD.fb&&TFD.fb.auth.currentUser;if(!l.length&&me0)l=[me0.uid];meta.let=firebase.firestore.FieldValue.arrayUnion(...l)}MD[d]=meta;put(d,f,v,meta)};
- Object.keys(st).forEach(k=>{if(!["people","reqs","ov","ruleSets"].includes(k)&&st[k]!==undefined)put("turniferie/config",[k],k==="log"&&Array.isArray(st[k])?st[k].map(x=>x&&x.txt?Object.assign({},x,{txt:mSan(x.txt)}):x):st[k],null)});
+ Object.keys(st).forEach(k=>{if(!["people","reqs","ov","ruleSets","log"].includes(k)&&st[k]!==undefined)put("turniferie/config",[k],st[k],null)});
  (st.people||[]).forEach((p,i)=>put("persone/"+(p.rep||0),["p",String(p.id)],p,{rep:p.rep||0}));
  (st.reqs||[]).forEach(r=>{const m=ymOf(r.days&&r.days[0]),y=+m.slice(0,4),rep=pr.get(r.pid)||0;if(arc.has(y))put("archivio_rq/"+rep+"_"+m,["r",String(r.id)],r,{rep,anno:y,mese:m});else{const aq=qOf(m);const km=C.mot[r.pid+"_"+aq],xm=r.tipo==="A"&&km&&km.r&&km.r[r.id];if(xm)mPut(r.pid,rep,aq,["r",String(r.id)],xm);else if(MCFG.ris.includes(r.tipo)){mPut(r.pid,rep,aq,["r",String(r.id)],{tipo:r.tipo,note:r.note||""});r=Object.assign({},r,{tipo:"A"});delete r.note}put(ACOL+"/"+rep+"_"+aq,["r",String(r.id)],r,{rep,anno:y,aq})}});
  Object.entries(st.ov||{}).forEach(([k,v])=>{const i=k.indexOf("|"),m=ymOf(k.slice(i+1)),y=+m.slice(0,4),rep=pr.get(+k.slice(0,i))||0;if(arc.has(y))put("archivio_ov/"+rep+"_"+m,["o",k],v,{rep,anno:y,mese:m});else{const aq=qOf(m),pid=+k.slice(0,i);const km=C.mot[pid+"_"+aq];if(v==="AS"&&km&&km.o&&km.o[k])mPut(pid,rep,aq,["o",k],km.o[k]);else if(OVRIS.includes(v)){mPut(pid,rep,aq,["o",k],v);v="AS"}put(ACOL+"/"+rep+"_"+aq,["o",k],v,{rep,anno:y,aq})}});
@@ -740,9 +740,9 @@ function fbUnits(st){const U={},pr=new Map((st.people||[]).map(p=>[p.id,p.rep||0
  return U}
 const fbSigOf=st=>{const o=Object.fromEntries(Object.entries(fbUnits(st)).map(([k,u])=>[k,JSON.stringify(canon(u.v))]));
  Object.keys(o).forEach(k=>{const h=k.indexOf("#"),doc=k.slice(0,h),f=k.slice(h+1).split("\u0001"),sl=doc.indexOf("/"),col=doc.slice(0,sl),id=doc.slice(sl+1);
-  if(doc==="turniferie/config"&&f[0]==="log"){const v=(C.cfg||{}).log;if(v!==undefined)o[k]=JSON.stringify(canon(v));return}
   if(col!==ACOL&&col!==MCOL)return;const d=(col===ACOL?C.an:C.mot)[id];if(!d){if(col===MCOL)delete o[k];return}
-  let v=d;for(const x of f){v=v==null?undefined:v[x]}if(v===undefined)delete o[k];else o[k]=JSON.stringify(canon(v))});return o};
+  let v=d;for(const x of f){v=v==null?undefined:v[x]}if(v===undefined)delete o[k];else o[k]=JSON.stringify(canon(v))});
+ if(TFD.logMig&&TFD.who&&TFD.who.user==="admin"&&C.cfg&&C.cfg.log!==undefined)o["turniferie/config#log"]="vecchio";return o};
 async function fbWrite(st){
  const db=TFD.fb.db,U=fbUnits(JSON.parse(JSON.stringify(st))),nowDocs=new Set(Object.values(U).map(u=>u.doc)),byDoc=new Map(),gone=new Set(),newSig={};
  const g=d=>byDoc.get(d)||(byDoc.set(d,{up:[],rm:[],meta:null}),byDoc.get(d));
@@ -756,7 +756,9 @@ async function fbWrite(st){
   ops.push(b=>b.set(ref,x.meta||{},{merge:true}));
   const pairs=[];x.up.forEach(u=>pairs.push(FPth(u.f),u.v));x.rm.forEach(f=>pairs.push(FPth(f),firebase.firestore.FieldValue.delete()));
   for(let i=0;i<pairs.length;i+=2000){const part=pairs.slice(i,i+2000);ops.push(b=>b.update(ref,...part))}}
+ const lq=LOGQ.slice();lq.forEach(x=>ops.push(b=>b.set(db.doc("registro/"+x.day+"_"+x.rep),{day:x.day,rep:x.rep,e:{[x.k]:Object.assign({},x.e,{txt:mSan(x.e.txt)})}},{merge:true})));
  for(let i=0;i<ops.length;i+=400){const b=db.batch();ops.slice(i,i+400).forEach(o=>o(b));await b.commit()}
+ LOGQ.splice(0,lq.length);
  TFD.sig=newSig;
  Object.keys(ARC).forEach(y=>{ARC[y]=arcOf(st,+y)});Object.keys(OUT).forEach(y=>{if(OUTA.has(y))OUT[y]=outOf(st,+y)});
 }
@@ -771,13 +773,18 @@ function fbAssemble(){const st=JSON.parse(JSON.stringify(C.cfg||{}));
   st.reqs=st.reqs.map(r=>{const x=M.r[r.id];return r.tipo==="A"&&x?Object.assign({},r,{tipo:x.tipo},x.note?{note:x.note}:{}):r});
   Object.keys(st.ov).forEach(k=>{if(st.ov[k]==="AS"&&M.o[k])st.ov[k]=M.o[k]})}
  st.ruleSets=Object.values(C.reg).map(d=>d.d).filter(Boolean).sort((a,b)=>a.id-b.id);
+ st.log=Object.values(C.rg).flatMap(d=>Object.values(d&&d.e||{})).concat(LOGQ.map(x=>x.e)).sort((a,b)=>String(a.at).localeCompare(String(b.at)));
  return st}
 async function fbWho(){const u=TFD.fb.auth.currentUser;if(!u)return null;
  try{const d=await TFD.fb.db.doc("utenti/"+u.uid).get();if(d.exists)return d.data()}catch(e){}
  return (u.email||"")===fem("admin")?{user:"admin"}:null}
+const GRX=new Set();let GRI=false;
 function fbReps(){const w=TFD.who||{};if(w.user==="admin"||w.vid)return null;
  const st=fbAssemble(),p=(st.people||[]).find(x=>x.id===w.pid);if(!p)return [];
- const S0=S;S=st;let r=[];try{r=[...new Set([p.rep||0,...seeOf(p)])]}catch(e){r=[p.rep||0]}S=S0;return r}
+ const S0=S;S=st;let r=[];try{r=[...new Set([p.rep||0,...segue(p),...seeOf(p).filter(id=>GRX.has(id))])]}catch(e){r=[p.rep||0]}S=S0;return r}
+// Accende (carica) altri enti visibili; senza argomento tutti quelli che la persona puo' vedere
+function repsOn(ids){if(!(TFD.kind==="firebase"&&TFD.live&&Array.isArray(TFD.reps)&&me))return;const p=person(me);if(!p)return;
+ const add=(ids||seeOf(p)).filter(id=>!TFD.reps.includes(id));if(!add.length)return;add.forEach(id=>GRX.add(id));toast("Carico "+add.map(repName).join(", ")+"…");fbApply()}
 const snapInto=(box,sn)=>sn.docChanges().forEach(c=>{if(c.type==="removed")delete box[c.doc.id];else box[c.doc.id]=c.doc.data()});
 function fbListen(col,box,reps){const db=TFD.fb.db,offs=[],firsts=[];
  const q=reps===null?[db.collection(col)]:Array.from({length:Math.ceil(reps.length/30)||0},(_,i)=>db.collection(col).where("rep","in",reps.slice(i*30,i*30+30)));
@@ -834,6 +841,16 @@ async function fbStart(){const db=TFD.fb.db;TFD.who=await fbWho();trackViewer();
  try{const c=await db.doc(MCFGD).get();if(c.exists)MCFG=Object.assign({ris:[],vmot:[]},c.data())}catch(e){}
  FBL.mot=mListen(WQ,adm);
  await FBL.mot.ready;
+ // registro: copia una tantum del vecchio log della configurazione (solo admin)
+ if(adm&&C.cfg&&Array.isArray(C.cfg.log)&&C.cfg.log.length){try{const pr={};Object.values(C.per).forEach(d=>Object.values(d.p||{}).forEach(q=>pr[q.id]=q.rep||0));const by={};
+  C.cfg.log.forEach((e,i)=>{const d0=new Date(e.at),day=isNaN(d0)?todayIso:iso(d0.getFullYear(),d0.getMonth(),d0.getDate()),r=pr[e.pid]||0,id=day+"_"+r;(by[id]=by[id]||{day,rep:r,e:{}}).e["v"+i]=Object.assign({},e,{txt:mSan(e.txt)})});
+  const ids=Object.keys(by);for(let i=0;i<ids.length;i+=400){const b=db.batch();ids.slice(i,i+400).forEach(id=>b.set(db.doc("registro/"+id),by[id],{merge:true}));await b.commit()}TFD.logMig=true}catch(e){console.warn("registro",e)}}
+ else if(adm)TFD.logMig=true;
+ FBL.rg=(()=>{const offs=[],ws=[];if(TFD.who&&TFD.who.vid)return {off:()=>{},ready:Promise.resolve()};
+  const rs=adm?[0,...Object.values(C.per).flatMap(d=>Object.values(d.p||{}).map(q=>q.rep||0))]:[0,...(TFD.reps||[])];
+  [...new Set(rs)].forEach(r=>ws.push(new Promise(res=>{let f=true;offs.push(db.doc("registro/"+todayIso+"_"+r).onSnapshot(sn=>{if(sn.exists)C.rg[r]=sn.data();else delete C.rg[r];if(f){f=false;res()}else fbApplySoon()},e=>{if(f){f=false;res()}}))})));
+  return {off:()=>offs.forEach(o=>o()),ready:Promise.all(ws)}})();
+ await FBL.rg.ready;
  const st=fbAssemble();TFD.sig=fbSigOf(st);TFD.live=true;if(adm)setTimeout(()=>{if(!(TFD.live&&LOGGED==="a"&&TFD.kind==="firebase"))return;Object.entries(C.mot).forEach(([id,d])=>{if(d&&!Object.keys(d.r||{}).length&&!Object.keys(d.o||{}).length)db.doc(MCOL+"/"+id).delete().catch(()=>{})});tfQueue()},4000);return st}
 let FBA=0;
 function fbApplySoon(){if(!TFD.live)return;clearTimeout(FBA);FBA=setTimeout(fbApply,120)}
@@ -1043,7 +1060,8 @@ function pwSheet(){if(FBM&&TFD.kind==="firebase")return fbPwSheet("p"+me);const 
  $("pwno").onclick=()=>{closeSheet();doLogout()};
  $("pwok").onclick=()=>{const a=$("pw1").value,b=$("pw2").value;if(a.length<8)return toast("La password deve avere almeno 8 caratteri");if(a===PW0)return toast("Scegli una password diversa da quella standard");if(a!==b)return toast("Le due password non coincidono");pwHash("",a).then(h=>{p.acc.h=h;p.acc.must=false;delete p.acc.tmp;logIt(p.id,"password personale impostata");save();closeSheet();toast("Password salvata, benvenuto");render()})};}
 const nowStr=()=>new Date().toISOString();
-const logIt=(pid,txt)=>{S.log.push({at:nowStr(),pid,txt,by:me||0});if(S.log.length>500)S.log=S.log.slice(-500)};
+let LOGQ=[];
+const logIt=(pid,txt)=>{const e={at:nowStr(),pid,txt,by:me||0},q=person(pid);S.log.push(e);if(S.log.length>500)S.log=S.log.slice(-500);LOGQ.push({e,day:todayIso,rep:q&&q.rep||0,k:Date.now().toString(36)+Math.random().toString(36).slice(2,6)})};
 const repName=id=>(S.reparti.find(r=>r.id===id)||{name:"Senza reparto"}).name;
 let grSel=null,gQ="";
 let SORT="man";try{SORT=localStorage.getItem("tf-sort")||"man"}catch(e){}
@@ -1107,7 +1125,7 @@ function confirm2(b,fn){if(b.dataset.c){fn()}else{b.dataset.c=1;const t=b.textCo
 $("who").onchange=e=>{const v=e.target.value;me=v[0]==="p"?+v.slice(1):0;ro=v[0]==="v"?+v.slice(1):false;sel=[];if(TFD.live&&TFD.kind==="firebase")fbApply();if(!canSet()&&(tab==="imp"||tab==="turni"))tab="persone";closeSheet();render()};
 $("prev").onclick=()=>{if(!beforeApp(cur.y,cur.m)&&beforeApp(cur.y+(cur.m===0?-1:0),(cur.m+11)%12))return toast("L'app parte da ottobre "+APP0Y);GX.a=GX.b=0;cur.m--;if(cur.m<0){cur.m=11;cur.y--}if(!me)closeSheet();render()};
 $("next").onclick=()=>{GX.a=GX.b=0;cur.m++;if(cur.m>11){cur.m=0;cur.y++}if(!me)closeSheet();render()};
-document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;closeSheet();render()});
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;if(tab==="ore"||tab==="mese")repsOn();closeSheet();render()});
 function closeSheet(){$("sheet").hidden=true}
 
 function editCell(p,day){
@@ -1284,7 +1302,7 @@ async function doExport(){
  if(await saveBlob(name,blob)){toast("File salvato");closeSheet()}
 }
 
-$("expb").onclick=expSheet;
+$("expb").onclick=()=>{repsOn();expSheet()};
 $("gfind").oninput=e=>{gQ=e.target.value;GPATCH=null;render()};$("gsort").value=SORT;$("gsort").onchange=e=>{SORT=e.target.value;try{localStorage.setItem("tf-sort",SORT)}catch(x){}render()};
 $("apprev").textContent="Rev. "+APP_REV;$("apprev").title="Revisione "+APP_REV+" del "+APP_REV_DATE;
 let updSkip=0,swReg=null;
@@ -1343,21 +1361,22 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     let h='<tr><th class="name" rowspan="2">Persona<span id="gmon" class="gmon"></span></th>'+mons.map(([yy,mm,nn],i)=>`<th class="mh ms" colspan="${nn}"><div style="display:flex;align-items:center;gap:8px">${i===0&&mons.length<GMAX&&!beforeApp(yy+(mm===0?-1:0),(mm+11)%12)?`<button class="ghost gx" data-gx="b" style="padding:2px 8px;font-size:12px">−1 mese</button>`:""}<span>${new Date(yy,mm,1).toLocaleDateString("it-IT",{month:"long",year:"numeric"})}</span>${i===mons.length-1&&mons.length<GMAX?`<button class="ghost gx" data-gx="a" style="margin-left:auto;padding:2px 8px;font-size:12px">+1 mese</button>`:""}</div></th>`).join("")+"</tr><tr>";
     for(const day of days){const w=D(day).getDay();h+=`<th class="${S.fest.includes(day)?"fest":w%6===0?"we":""}${ms(day)}${day===todayIso?" tdh":""}"${day===todayIso?' id="tdh"':""} data-hd="${day}">${"DLMMGVS"[w]}<br>${+day.slice(8)}</th>`}
     h+="</tr>";
-    const VA=vis(),GR0=repsOf(VA).filter(r=>r.id!==-1);if(grSel)grSel=grSel.filter(id=>GR0.some(r=>r.id===id));if(grSel&&!grSel.length)grSel=null;
+    const VA=vis(),GR0=repsOf(VA).filter(r=>r.id!==-1);
+    if(!GRI&&me&&TFD.kind==="firebase"&&Array.isArray(TFD.reps)){GRI=true;const sg=segue(person(me)),a=GR0.map(r=>r.id).filter(id=>sg.includes(id));if(a.length&&a.length<GR0.length)grSel=a}if(grSel)grSel=grSel.filter(id=>GR0.some(r=>r.id===id));if(grSel&&!grSel.length)grSel=null;
     const gOn=id=>!grSel||grSel.includes(id),gq=gQ.trim().toLowerCase();
     $("greps").innerHTML=GR0.length>1?`<span class="cl muted" style="font-size:12px;font-weight:600">Enti da mostrare</span>${GR0.map(r=>`<label class="chip"><input type="checkbox" data-gr="${r.id}"${gOn(r.id)?" checked":""}>${esc(r.name)}</label>`).join("")}${grSel?'<button class="ghost" id="grall">Tutti</button>':""}`:"";
-    $("greps").querySelectorAll("[data-gr]").forEach(c=>c.onchange=()=>{const id=+c.dataset.gr;let a=grSel?[...grSel]:GR0.map(r=>r.id);a=a.filter(x=>x!==id);if(c.checked)a.push(id);if(!a.length){c.checked=true;return toast("Lascia almeno un ente selezionato")}grSel=a.length===GR0.length?null:a;render()});
-    if($("grall"))$("grall").onclick=()=>{grSel=null;render()};
+    $("greps").querySelectorAll("[data-gr]").forEach(c=>c.onchange=()=>{const id=+c.dataset.gr;let a=grSel?[...grSel]:GR0.map(r=>r.id);a=a.filter(x=>x!==id);if(c.checked)a.push(id);if(!a.length){c.checked=true;return toast("Lascia almeno un ente selezionato")}grSel=a.length===GR0.length?null:a;if(c.checked)repsOn([id]);render()});
+    if($("grall"))$("grall").onclick=()=>{grSel=null;repsOn();render()};
     if($("gfind").value!==gQ)$("gfind").value=gQ;
     const V=VA.filter(p=>(p.id===me||gOn(S.reparti.some(r=>r.id===p.rep)?p.rep:-1))&&(!gq||p.id===me||p.name.toLowerCase().includes(gq)));
     if(gp&&$("grid").rows.length)gridPatch(gp);else{
     for(const rp of repsOf(V)){
     const inR=p=>rp.id===-1?!S.reparti.find(r=>r.id===p.rep):p.rep===rp.id,grp=V.filter(inR),grpA=VA.filter(inR);
     h+=`<tr class="rep"><td colspan="${days.length+1}"><span class="repn">${rp.name}</span></td></tr>`;
-    const AR=areasOf(rp.id),aix=p=>{const i=AR.findIndex(a=>a.id===p.area);return i<0?AR.length:i};let lastA=null;
+    const AR=areasOf(rp.id),aix=p=>AR.findIndex(a=>a.id===p.area);let lastA=null;
     if(AR.length)grp.sort((a,b)=>aix(a)-aix(b));
     for(const p of grp){
-      if(AR.length){const a=areaOf(p),k=a?a.id:0;if(k!==lastA){lastA=k;h+=`<tr class="area"><td colspan="${days.length+1}"><span class="arn" style="--ac:${a?a.col:"#94a3b8"}">${a?esc(a.name):"Senza area"}</span></td></tr>`}}
+      if(AR.length){const a=areaOf(p),k=a?a.id:0;if(k!==lastA){lastA=k;if(a)h+=`<tr class="area"><td colspan="${days.length+1}"><span class="arn" style="--ac:${a.col}">${esc(a.name)}</span></td></tr>`}}
       const mine=p.id===me;
       const pn=p.name.trim().split(/\s+/),sn=pn.length>1?pn[0]+" "+pn[pn.length-1][0]+".":p.name;
       const pa=areaOf(p);h+=`<tr><td class="name${pa?" har":""}"${pa?` style="--ac:${pa.col}"`:""} title="${p.name}${pa?" · "+esc(pa.name):""} · ${PROF[p.prof]}"><span class="nf">${p.name}</span><span class="ns">${sn}</span></td>`;
