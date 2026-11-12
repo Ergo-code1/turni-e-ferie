@@ -443,7 +443,7 @@ td.name.har{box-shadow:inset 4px 0 0 var(--ac),6px 0 8px -6px rgb(0 0 0/.15)!imp
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.7.2",APP_REV_DATE="12/11/2026";
+const APP_REV="15.7.3",APP_REV_DATE="12/11/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={AS:"Assenza giustificata",MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -866,8 +866,8 @@ const canReadM=q=>{if(!me&&!ro)return true;if(me){const x=person(me);if(!x)retur
  const R=S.reparti.find(r=>r.id===q.rep);return MCFG.vmot.includes(ro)&&!(R&&R.noVw)};
 const oreAll=()=>(S.oreSee||[]).includes(me?"p"+me:"v"+ro);
 // Ore di altri: le persone vedono solo i reparti che seguono (proprio + "Responsabile anche di"), mai quelli solo in "Può vedere"
-// Monte ferie: lo inserisce l'admin o il responsabile (livello superiore) delle persone del proprio ente
-const edMp=q=>{if(!me)return false;const x=person(me);return !!x&&x.id!==q.id&&segue(x).includes(q.rep)&&lvl(x)>lvl(q)};
+// Monte ferie: lo inserisce l'admin, il responsabile (livello superiore) per le persone del proprio ente, e ogni responsabile (livello 2+) per sé
+const edMp=q=>{if(!me)return false;const x=person(me);if(!x)return false;if(x.id===q.id)return lvl(x)>=2;return segue(x).includes(q.rep)&&lvl(x)>lvl(q)};
 const oreCan=q=>{if(!me)return oreAll()||canReadM(q);const x=person(me);if(!x)return false;if(x.id===q.id)return true;if(!segue(x).includes(q.rep))return false;return oreAll()||lvl(x)>lvl(q)};
 const oreOk=()=>{if(!me&&!ro)return true;if(me&&person(me))return true;return oreAll()||MCFG.vmot.includes(ro)};
 // Le persone non abilitate in Impostazioni → Pagina Ore vedono solo le proprie ore
