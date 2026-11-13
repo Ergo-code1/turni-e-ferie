@@ -444,7 +444,7 @@ td.name.har{box-shadow:inset 4px 0 0 var(--ac),6px 0 8px -6px rgb(0 0 0/.15)!imp
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.8.0",APP_REV_DATE="12/11/2026";
+const APP_REV="15.8.1",APP_REV_DATE="13/11/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={AS:"Assenza giustificata",MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -646,7 +646,7 @@ function applyLogin(k){LOGGED=k;sel=[];SCRT=true;GX.a=GX.b=0;cur.y=new Date().ge
  if(k==="a"){me=0;ro=false}else if(k[0]==="p"){me=+k.slice(1);ro=false}else{me=0;ro=+k.slice(1)}
  const adm=k==="a";$("whol").hidden=!adm;$("whoname").hidden=adm;
  $("whoname").textContent=adm?"":(k[0]==="p"?person(me).name:(S.viewers.find(v=>v.id===ro)||{}).name||"");
- if(!canSet()&&(tab==="imp"||tab==="turni"))tab="persone";
+ if((tab==="imp"&&!canImp())||(tab==="turni"&&!canSet()))tab="persone";
  $("lgc").hidden=true;fillWho();render();
  if(me&&person(me).acc&&person(me).acc.must&&!person(me).acc.nopw)pwSheet()}
 function doLogout(){try{localStorage.removeItem("tf-login")}catch(e){}if(FBM&&TFD.fb){TFD.fb.auth.signOut().finally(()=>location.reload());return}LOGGED=null;me=0;ro=false;closeSheet();showLogin()}
@@ -655,7 +655,7 @@ function validKey(k){if(k==="a")return true;if(!k)return false;
  if(k[0]==="v")return S.viewers.some(v=>v.id===+k.slice(1));return false}
 const w3=t=>(t||"").toLowerCase().normalize("NFD").replace(/[^a-z]/g,"").slice(0,3);
 function defUser(p){const w=p.name.trim().split(/\s+/),c=w3(w[0])+w3(w.slice(1).join(""));let k=c,n=2;
- while(k==="admin"||S.people.some(x=>x!==p&&x.acc&&x.acc.user===k))k=c+n++;return k}
+ while(k==="admin"||S.people.some(x=>x!==p&&x.acc&&x.acc.user===k)||(S.viewers||[]).some(v=>v.user===k||v.fbu===k))k=c+n++;return k}
 function fixCodes(nosave){let ch=false;
  S.people.forEach(p=>{const a=p.acc;if(!a)return;
   if(a.nopw){delete a.nopw;a.must=true;ch=true}
@@ -712,14 +712,14 @@ let WQ=winQ(),OUTA=new Set();
 const GX={b:0,a:0},GMAX=12,gMons=()=>{const n=8+GX.b+GX.a,s0=cur.m-1-GX.b,out=[];for(let k=0;k<n;k++){const t=s0+k,yy=cur.y+Math.floor(t/12),mm=((t%12)+12)%12;if(!beforeApp(yy,mm))out.push([yy,mm])}return out};
 const outOf=(st,y)=>{const a=arcOf(st,y);a.reqs=a.reqs.filter(r=>!WQ.includes(qOf(ymOf(r.days&&r.days[0]))));a.ov=Object.fromEntries(Object.entries(a.ov).filter(([k])=>!WQ.includes(qOf(k.slice(k.indexOf("|")+1)))));return a};
 const FPth=f=>new firebase.firestore.FieldPath(...f);
-const MCOL="motivi",MCFGD="motivi_cfg/c",OVRIS=["MA","L","F","DS","CM"];let MCFG={ris:["F","L","DS"],vmot:[]};
+const MCOL="motivi",MCFGD="motivi_cfg/c",OVRIS=["MA","L","F","DS","CM"];let MCFG={ris:["F","L","DS"],vmot:[],pmot:[]};
 // Chi legge i motivi di una persona: lei stessa, tutti i livelli sopra che seguono o vedono il suo reparto, i visualizzatori con la spunta
 function mSan(t){if(typeof t!=="string")return t;const w=new Set();MCFG.ris.forEach(k=>{if(TIPI[k])w.add(TIPI[k]);if(k==="F")["Ferie / permesso","ferie/permesso","ferie","permesso"].forEach(x=>w.add(x));if(k==="L")["permesso 104","104"].forEach(x=>w.add(x))});
  OVRIS.forEach(k=>{if(LAB[k])w.add(LAB[k])});const L=[...w].filter(Boolean).sort((a,b)=>b.length-a.length).map(x=>x.replace(/[.*+?^${}()|[\]\\\/]/g,"\\$&"));
  return L.length?t.replace(new RegExp("(^|[^\\wàèéìòù])("+L.join("|")+")(?![\\wàèéìòù])","gi"),"$1assenza"):t}
 function mLet(st,pid,rep){const P=st.people||[],q=P.find(x=>x.id===pid),L=q&&q.lvl||1,u=new Set();if(q&&q.acc&&q.acc.uid)u.add(q.acc.uid);
  P.forEach(x=>{if(x.id===pid||!(x.acc&&x.acc.uid)||(x.lvl||1)<=L)return;const sg=[x.rep,...(x.reps||[])],sv=x.see||sg;if(sg.includes(rep)||sv.includes(rep))u.add(x.acc.uid)});
- const R=(st.reparti||[]).find(r=>r.id===rep);if(!(R&&R.noVw))(st.viewers||[]).forEach(v=>{if(v.uid&&MCFG.vmot.includes(v.id))u.add(v.uid)});return [...u].sort()}
+ const R=(st.reparti||[]).find(r=>r.id===rep);if(!(R&&R.noVw)){(st.viewers||[]).forEach(v=>{if(v.uid&&MCFG.vmot.includes(v.id))u.add(v.uid)});P.forEach(x=>{if(x.acc&&x.acc.uid&&(MCFG.pmot||[]).includes(x.id))u.add(x.acc.uid)})}return [...u].sort()}
 function mPrevUid(){if(!(TFD.who&&TFD.who.user==="admin")||!S)return null;if(me){const q=(S.people||[]).find(x=>x.id===me);return q&&q.acc&&q.acc.uid||""}if(ro){const v=(S.viewers||[]).find(x=>x.id===ro);return v&&v.uid||""}return null}
 // Motivi: un ascolto per trimestre della finestra; se manca un indice si ripiega su una sola ricerca filtrata qui
 function mQs(aqs,adm){const db=TFD.fb.db,u=TFD.fb.auth.currentUser.uid;return aqs.map(q=>adm?db.collection(MCOL).where("aq","==",q):db.collection(MCOL).where("let","array-contains",u).where("aq","==",q))}
@@ -839,7 +839,7 @@ async function fbStart(){const db=TFD.fb.db;TFD.who=await fbWho();trackViewer();
  if(adm)try{const q0=APP0Y*10+Math.floor(APP0M/3)+1,om=await db.collection(MCOL).where("aq",">",0).where("aq","<",q0).get();for(let i=0;i<om.docs.length;i+=400){const w=db.batch();om.docs.slice(i,i+400).forEach(d=>w.delete(d.ref));await w.commit()}}catch(e){console.warn("pulizia motivi",e)}
  TFD.reps=fbReps();WQ=winQ();FBL.an=fbListenAn(C.an,TFD.reps);
  await FBL.an.ready;
- try{const c=await db.doc(MCFGD).get();if(c.exists)MCFG=Object.assign({ris:[],vmot:[]},c.data())}catch(e){}
+ try{const c=await db.doc(MCFGD).get();if(c.exists)MCFG=Object.assign({ris:[],vmot:[],pmot:[]},c.data())}catch(e){}
  FBL.mot=mListen(WQ,adm);
  await FBL.mot.ready;
  // registro: copia una tantum del vecchio log della configurazione (solo admin)
@@ -863,13 +863,13 @@ function fbApply(){if(!TFD.live)return;if(TFD.dirty||TFD.busy){TFD.needApply=tru
  fillWho();render();if(mg)save()}
 // Anni archiviati: non caricati all'apertura, scaricati quando servono
 // Chi legge i motivi di q (stessa logica di mLet): admin, q stessa, i livelli sopra che seguono o vedono il suo reparto, visualizzatori con la spunta
-const canReadM=q=>{if(!me&&!ro)return true;if(me){const x=person(me);if(!x)return false;if(x.id===q.id)return true;return lvl(x)>lvl(q)&&([x.rep,...(x.reps||[])].includes(q.rep)||(x.see||segue(x)).includes(q.rep))}
+const canReadM=q=>{if(!me&&!ro)return true;if(me){const x=person(me);if(!x)return false;if(x.id===q.id)return true;if(pVw(x)){const R=S.reparti.find(r=>r.id===q.rep);if(!(R&&R.noVw))return true}return lvl(x)>lvl(q)&&([x.rep,...(x.reps||[])].includes(q.rep)||(x.see||segue(x)).includes(q.rep))}
  const R=S.reparti.find(r=>r.id===q.rep);return MCFG.vmot.includes(ro)&&!(R&&R.noVw)};
 const oreAll=()=>(S.oreSee||[]).includes(me?"p"+me:"v"+ro);
 // Ore di altri: le persone vedono solo i reparti che seguono (proprio + "Responsabile anche di"), mai quelli solo in "Può vedere"
 // Monte ferie: lo inserisce l'admin, il responsabile (livello superiore) per le persone del proprio ente, e ogni responsabile (livello 2+) per sé
 const edMp=q=>{if(!me)return false;const x=person(me);if(!x)return false;if(x.id===q.id)return lvl(x)>=2;return segue(x).includes(q.rep)&&lvl(x)>lvl(q)};
-const oreCan=q=>{if(!me)return oreAll()||canReadM(q);const x=person(me);if(!x)return false;if(x.id===q.id)return true;if(!segue(x).includes(q.rep))return false;return oreAll()||lvl(x)>lvl(q)};
+const oreCan=q=>{if(!me)return oreAll()||canReadM(q);const x=person(me);if(!x)return false;if(x.id===q.id)return true;if(pVw(x))return canReadM(q);if(!segue(x).includes(q.rep))return false;return oreAll()||lvl(x)>lvl(q)};
 const oreOk=()=>{if(!me&&!ro)return true;if(me&&person(me))return true;return oreAll()||MCFG.vmot.includes(ro)};
 // Le persone non abilitate in Impostazioni → Pagina Ore vedono solo le proprie ore
 // La scheda Anno non serve agli operatori (livello 1), salvo i pianificatori
@@ -1024,12 +1024,16 @@ const person=id=>S.people.find(p=>p.id===id);
 const lvl=p=>p&&p.lvl||1,lvName=p=>S.levels[lvl(p)-1]||"Livello "+lvl(p);
 const segue=p=>[...new Set([p.rep,...(p.reps||[])])].filter(Boolean);
 const inGrid=p=>p.prof!=="none"&&!!p.rep;
-const seeOf=p=>p.see||segue(p);
+const pVw=x=>!!x&&(MCFG.pmot||[]).includes(x.id);
+const seeOf=p=>pVw(p)?S.reparti.map(r=>r.id):(p.see||segue(p));
 const vwr=()=>ro?S.viewers.find(v=>v.id===ro):null;
 const pianOf=x=>{if(!x||!x.pian)return null;const a=(x.pianR&&x.pianR.length?x.pianR:[x.rep]).filter(id=>id&&S.reparti.some(r=>r.id===id));return a.length?a:null};
 const planR=()=>me?pianOf(person(me)):pianOf(vwr());
 const planOnly=()=>!!planR()&&(!!ro||lvl(person(me))<2);
 const canSet=()=>(!ro&&(!me||lvl(person(me))>=2))||!!planR();
+const feFlag=()=>me?!!(person(me)||{}).fe:ro?!!(vwr()||{}).fe:false;
+const festOnly=()=>!canSet()&&feFlag();
+const canImp=()=>canSet()||feFlag();
 let yrSel=null;
 // chi approva: il primo livello sopra, nei reparti in comune; se manca sale al successivo
 function approvers(q){const c=S.people.filter(x=>x.id!==q.id&&lvl(x)>lvl(q)&&segue(x).some(r=>segue(q).includes(r)));if(!c.length)return[];const mn=Math.min(...c.map(lvl));return c.filter(x=>lvl(x)===mn)}
@@ -1149,7 +1153,7 @@ $("accb").onclick=()=>{const u=TFD.fb&&TFD.fb.auth.currentUser;if(!u)return;cons
  ap();$("themeb").onclick=()=>{th=nx[th];try{localStorage.setItem("tf-theme",th)}catch(e){}ap()}}
 fillWho();
 function confirm2(b,fn){if(b.dataset.c){fn()}else{b.dataset.c=1;const t=b.textContent;b.textContent="Conferma?";setTimeout(()=>{if(b.isConnected){delete b.dataset.c;b.textContent=t}},3000)}}
-$("who").onchange=e=>{const v=e.target.value;me=v[0]==="p"?+v.slice(1):0;ro=v[0]==="v"?+v.slice(1):false;sel=[];if(TFD.live&&TFD.kind==="firebase")fbApply();if(!canSet()&&(tab==="imp"||tab==="turni"))tab="persone";closeSheet();render()};
+$("who").onchange=e=>{const v=e.target.value;me=v[0]==="p"?+v.slice(1):0;ro=v[0]==="v"?+v.slice(1):false;sel=[];if(TFD.live&&TFD.kind==="firebase")fbApply();if((tab==="imp"&&!canImp())||(tab==="turni"&&!canSet()))tab="persone";closeSheet();render()};
 $("prev").onclick=()=>{if(!beforeApp(cur.y,cur.m)&&beforeApp(cur.y+(cur.m===0?-1:0),(cur.m+11)%12))return toast("L'app parte da ottobre "+APP0Y);GX.a=GX.b=0;cur.m--;if(cur.m<0){cur.m=11;cur.y--}if(!me)closeSheet();render()};
 $("next").onclick=()=>{GX.a=GX.b=0;cur.m++;if(cur.m>11){cur.m=0;cur.y++}if(!me)closeSheet();render()};
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;if(tab==="ore"||tab==="mese")repsOn();closeSheet();render()});
@@ -1381,7 +1385,7 @@ function migMSV(){if(S.migMSV)return false;const p=S.people.find(x=>/gianotti/i.
  logIt(p.id,"regola: ogni lunedì Mattina a Settimo Vittone (MSV) invece di Mattina");return true}
 function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TFD.live)&&migMSV()){save();clrPC()}if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TFD.live)&&!S.g2027&&mig2027()){save();toast("Giro Manutenzione esteso al 2027 in continuità con novembre e dicembre")}syncTipi();if(!oreOk()&&tab==="ore")tab="persone";if(!annoOk()&&tab==="mese")tab="persone";if(SCRT&&LOGGED)setTimeout(()=>{if(SCRT&&scrollToday())SCRT=false},0);{const ys=arcYearsNeeded(),b=$("arcban");if(b){const ay=(tab==="ore"?oy:cur.y);b.hidden=!isArc(ay);b.textContent=isArc(ay)?(ARC[ay]?"📦 Anno "+ay+" archiviato":"📦 Anno "+ay+" archiviato · caricamento…"):""}ys.forEach(y=>{if(!ARC[y])ensureYear(y)})}
   const{y,m}=cur,n=new Date(y,m+1,0).getDate();
-  $("tabimp").hidden=$("tabturni").hidden=!canSet();document.querySelector('.tabs button[data-t="ore"]').hidden=!oreOk();document.querySelector('.tabs button[data-t="mese"]').hidden=!annoOk();$("repl").hidden=!!me;$("expb").hidden=!canExp();
+  $("tabimp").hidden=!canImp();$("tabturni").hidden=!canSet();document.querySelector('.tabs button[data-t="ore"]').hidden=!oreOk();document.querySelector('.tabs button[data-t="mese"]').hidden=!annoOk();$("repl").hidden=!!me;$("expb").hidden=!canExp();
   document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===tab));
   ["persone","mese","ore","imp","turni"].forEach(t=>$("v-"+t).hidden=t!==tab);
   $("mlabel").textContent=new Date(y,m,1).toLocaleDateString("it-IT",{month:"long",year:"numeric"});
@@ -1526,7 +1530,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
   }
 
   if(tab==="imp"||tab==="turni"){
-    document.querySelectorAll(".adm").forEach(e=>e.hidden=(!!me||!!ro)&&!(e.classList.contains("pfest")&&planR()));$("impnote").hidden=!(me||ro);$("impnote").textContent=(me||ro)?(planR()?"Pianificatore · ":"")+"Puoi modificare giro, turno default, regole e persone solo di: "+RP().map(r=>r.name).join(", ")+".":"";
+    document.querySelectorAll(".adm").forEach(e=>e.hidden=(!!me||!!ro)&&!(e.classList.contains("pfest")&&(planR()||feFlag())));if(festOnly())document.querySelectorAll("#v-imp > details:not(#fdfest)").forEach(e=>e.hidden=true);$("impnote").hidden=!(me||ro);$("impnote").textContent=(me||ro)?(festOnly()?"Puoi modificare solo i giorni festivi.":(planR()?"Pianificatore · ":"")+"Puoi modificare giro, turno default, regole e persone solo di: "+RP().map(r=>r.name).join(", ")+"."):"";
     if(!RP().some(r=>r.id===giroRep))giroRep=(RP()[0]||{}).id;
     const GR=S.reparti.find(r=>r.id===giroRep);
     $("grep").innerHTML=RP().map(r=>`<option value="${r.id}">${r.name}${S.drafts[r.id]&&JSON.stringify(S.drafts[r.id])!==JSON.stringify(r.versions)?" (modifiche in bozza)":""}</option>`).join("");$("grep").value=String(giroRep);
@@ -1610,6 +1614,8 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
         <label class="wide">Piano turni<select id="pp${p.id}" data-p="${p.id}" data-f="prof">${opt(p.prof,hi?{...PROF0,...PROF}:PROF)}</select></label>
         ${inGrid(p)?`<label class="chk wide"><input type="checkbox" id="psw${p.id}" data-sw="${p.id}"${p.sw?" checked":""}> Può chiedere smart working</label>`:""}
       </div>
+      ${me||ro?"":`<label class="chk wide"><input type="checkbox" data-pvw="${p.id}"${pVw(p)?" checked":""}> <span><strong>Diritti da visualizzatore</strong> · vede tutti gli enti, i veri motivi delle assenze e le ore di tutti</span></label>`}
+      ${me||ro?"":`<label class="chk wide"><input type="checkbox" data-fe="${p.id}"${p.fe?" checked":""}> <span><strong>Modifica giorni festivi</strong> · può aggiungere e togliere i festivi (valgono per tutti)</span></label>`}
       ${planOnly()?"":`<label class="chk wide pianf"><input type="checkbox" id="ppi${p.id}" data-pian="${p.id}"${p.pian?" checked":""}> <span><strong>Pianificatore</strong> · vede Turni (Montastampi, Regole, Giro turni) e Impostazioni solo degli enti scelti</span></label>${p.pian?`<div class="chips"><span class="cl">Pianifica</span>${S.reparti.map(r=>`<label class="chip"><input type="checkbox" id="ppr${p.id}_${r.id}" data-ppr="${p.id}" value="${r.id}"${(pianOf(p)||[]).includes(r.id)?" checked":""}>${r.name}</label>`).join("")}</div>`:""}`}
       ${lvl(p)>1||(p.reps||[]).length?`<div class="chips"><span class="cl">Responsabile anche di</span>${RP().filter(r=>r.id!==p.rep).map(r=>`<label class="chip"><input type="checkbox" id="ps${p.id}_${r.id}" data-seg="${p.id}" value="${r.id}"${(p.reps||[]).includes(r.id)?" checked":""}>${r.name}</label>`).join("")||'<span class="muted">—</span>'}</div>`:""}
       <div class="chips"><span class="cl">Può vedere</span>${RP().map(r=>`<label class="chip"><input type="checkbox" id="pv${p.id}_${r.id}" data-see="${p.id}" value="${r.id}"${seeOf(p).includes(r.id)?" checked":""}>${r.name}</label>`).join("")}</div>
@@ -1638,7 +1644,9 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     $("ppl").querySelectorAll("[data-rs]").forEach(b=>b.onclick=()=>confirm2(b,()=>{const p=person(+b.dataset.rs);if(FBM){delete p.acc.uid;p.acc.must=true;logIt(p.id,"accesso da ricreare");save();toast("Ora elimina l'utente "+(p.acc.fbu||p.acc.user)+" in Firebase (Authentication → Utenti), poi premi Attiva accessi");render();return}p.acc.must=true;p.acc.tmp=genPw();logIt(p.id,"password reimpostata");save();toast("Nuova password provvisoria pronta");render()}));
     $("ppl").querySelectorAll("[data-np]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.np);if(c.checked){p.acc.nopw=true;delete p.acc.must;delete p.acc.tmp}else{delete p.acc.nopw;p.acc.must=true;p.acc.tmp=genPw()}logIt(p.id,c.checked?"accesso senza password":"accesso con password");save();toast(c.checked?"Ora entra senza password":"Password provvisoria creata");render()});
     $("ppl").querySelectorAll("[data-ra]").forEach(b=>b.onclick=()=>confirm2(b,()=>{const p=person(+b.dataset.ra);delete p.acc;logIt(p.id,"accesso tolto");save();toast("Accesso tolto");render()}));
-    $("ppl").querySelectorAll("[data-pian]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.pian);p.pian=c.checked;if(c.checked&&!(p.pianR||[]).length)p.pianR=p.rep?[p.rep]:[(S.reparti[0]||{}).id];save();fillWho();toast(c.checked?p.name+" ora è pianificatore":"Funzione pianificatore tolta a "+p.name);render()});
+    $("ppl").querySelectorAll("[data-pvw]").forEach(c=>c.onchange=()=>{const id=+c.dataset.pvw;MCFG.pmot=(MCFG.pmot||[]).filter(z=>z!==id);if(c.checked)MCFG.pmot.push(id);mSaveCfg();render()});
+ $("ppl").querySelectorAll("[data-fe]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.fe);if(c.checked)p.fe=true;else delete p.fe;save();toast(c.checked?p.name+" può modificare i festivi":"Permesso festivi tolto")});
+ $("ppl").querySelectorAll("[data-pian]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.pian);p.pian=c.checked;if(c.checked&&!(p.pianR||[]).length)p.pianR=p.rep?[p.rep]:[(S.reparti[0]||{}).id];save();fillWho();toast(c.checked?p.name+" ora è pianificatore":"Funzione pianificatore tolta a "+p.name);render()});
     $("ppl").querySelectorAll("[data-ppr]").forEach(c=>c.onchange=()=>{const p=person(+c.dataset.ppr),v=+c.value;let a=(pianOf(p)||[]).filter(x=>x!==v);if(c.checked)a.push(v);if(!a.length){c.checked=true;return toast("Lascia almeno un ente")}p.pianR=a;save();toast("Enti pianificati aggiornati")});
     $("ppl").querySelectorAll("[data-sw]").forEach(c=>c.onchange=()=>{person(+c.dataset.sw).sw=c.checked;save();toast(c.checked?"Smart working abilitato":"Smart working disabilitato")});
     $("ppl").querySelectorAll("[data-chd]").forEach(x=>x.onchange=()=>{window._chd=window._chd||{};window._chd[+x.dataset.chd]=x.value||todayIso;render()});
@@ -1684,9 +1692,18 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
      $("arcl").querySelectorAll("[data-ua]").forEach(b=>b.onclick=()=>confirm2(b,()=>archiveYear(+b.dataset.ua,false)));}
     if(FBM){const n=fbPending();$("fbsn").textContent=n?n+" da attivare":"tutti attivi";$("fbsb").onclick=()=>fbSync(true)}else $("fbsr").hidden=true;
     {const L=S.people.filter(p=>p.acc).sort((x,y)=>surn(x.name).localeCompare(surn(y.name),"it"));$("codes").innerHTML=L.length?L.map(p=>`<div class="row" style="justify-content:space-between;padding:3px 0"><span>${p.name} <span class="muted">· ${repName(p.rep)}${FBM&&!p.acc.uid?" · da attivare":p.acc.must?" · primo accesso da fare":""}</span></span><span><code>${p.acc.user}</code>${p.acc.email?` <span class="muted">· ${p.acc.email}</span>`:""}</span></div>`).join(""):'<p class="muted">Nessun accesso creato.</p>'}
-    $("vws").innerHTML=S.viewers.length?S.viewers.map(v=>`<div class="row" style="justify-content:space-between;padding:4px 0"><span>${v.name} <span class="ro">sola lettura</span></span><button data-vr="${v.id}" aria-label="Togli ${v.name}">✕</button></div><div class="row" style="padding:0 0 8px;gap:10px"><label class="chk"><input type="checkbox" id="vpi${v.id}" data-vpian="${v.id}"${v.pian?" checked":""}> Pianificatore</label><label class="chk"><input type="checkbox" data-vmot="${v.id}"${MCFG.vmot.includes(v.id)?" checked":""}> Vede motivi assenza</label></div>${v.pian?`<div class="chips" style="padding-bottom:8px"><span class="cl">Pianifica</span>${S.reparti.map(r=>`<label class="chip"><input type="checkbox" id="vrp${v.id}_${r.id}" data-vrep="${v.id}" value="${r.id}"${(pianOf(v)||[]).includes(r.id)?" checked":""}>${r.name}</label>`).join("")}</div>`:""}`).join(""):'<p class="muted">Nessun utente in sola lettura.</p>';
+    $("vws").innerHTML=S.viewers.length?S.viewers.map(v=>`<div class="row" style="justify-content:space-between;padding:4px 0"><span>${v.name} <span class="ro">sola lettura</span></span><button data-vr="${v.id}" aria-label="Togli ${v.name}">✕</button></div><div class="row" style="padding:0 0 8px;gap:10px"><label class="chk"><input type="checkbox" id="vpi${v.id}" data-vpian="${v.id}"${v.pian?" checked":""}> Pianificatore</label><label class="chk"><input type="checkbox" data-vfe="${v.id}"${v.fe?" checked":""}> Modifica festivi</label><label class="chk"><input type="checkbox" data-vmot="${v.id}"${MCFG.vmot.includes(v.id)?" checked":""}> Vede motivi assenza</label><span class="row" style="gap:6px;margin-left:auto"><select id="vtr${v.id}" aria-label="Ente">${S.reparti.filter(r=>!isAutoRep(r)).map(r=>`<option value="${r.id}">${r.name}</option>`).join("")}</select><button data-vtr="${v.id}" title="Diventa persona dell'ente scelto mantenendo nome utente e password">Trasforma in persona</button></span></div>${v.pian?`<div class="chips" style="padding-bottom:8px"><span class="cl">Pianifica</span>${S.reparti.map(r=>`<label class="chip"><input type="checkbox" id="vrp${v.id}_${r.id}" data-vrep="${v.id}" value="${r.id}"${(pianOf(v)||[]).includes(r.id)?" checked":""}>${r.name}</label>`).join("")}</div>`:""}`).join(""):'<p class="muted">Nessun utente in sola lettura.</p>';
     $("vws").querySelectorAll("[data-vmot]").forEach(c=>c.onchange=()=>{const id=+c.dataset.vmot;MCFG.vmot=MCFG.vmot.filter(z=>z!==id);if(c.checked)MCFG.vmot.push(id);mSaveCfg()});
-    $("vws").querySelectorAll("[data-vpian]").forEach(c=>c.onchange=()=>{const v=S.viewers.find(x=>x.id==c.dataset.vpian);v.pian=c.checked;if(v.pian&&!(v.pianR||[]).length)v.pianR=[(S.reparti[0]||{}).id];save();fillWho();toast(c.checked?v.name+" ora è pianificatore":"Funzione pianificatore tolta");render()});
+    $("vws").querySelectorAll("[data-vtr]").forEach(b=>b.onclick=()=>confirm2(b,async()=>{const v=S.viewers.find(x=>x.id==b.dataset.vtr);if(!v)return;const rep=+$("vtr"+v.id).value;
+   const id=Math.max(0,...S.people.map(p=>p.id))+1,u=v.fbu||v.user;
+   if(FBM&&v.uid){if(!TFD.fb)return toast("Collegamento a Firebase non pronto: riprova tra poco");try{await TFD.fb.db.doc("utenti/"+v.uid).set({user:u,pid:id})}catch(e){return toast("Non riuscito: "+(e.code||e.message))}}
+   const np={id,name:v.name,prof:"standard",off:0,rep,in:todayIso,chg:[{from:todayIso,prof:"standard",ingr:true}],acc:Object.assign({user:u,must:!!v.must},v.fbu?{fbu:v.fbu}:{},v.uid?{uid:v.uid}:{},v.must?{tmp:PW0}:{})};
+   if(v.fe)np.fe=true;if(v.pian){np.pian=true;if(v.pianR)np.pianR=v.pianR.slice()}
+   S.people.push(np);S.viewers=S.viewers.filter(x=>x!==v);
+   if(MCFG.vmot.includes(v.id)){MCFG.vmot=MCFG.vmot.filter(x=>x!==v.id);MCFG.pmot=(MCFG.pmot||[]).concat([id]);if(TFD.fb)TFD.fb.db.doc(MCFGD).set(MCFG).catch(()=>{})}
+   logIt(id,"da sola lettura a persona di "+repName(rep));save();fillWho();toast(v.name+" ora è persona di "+repName(rep)+" · stesso nome utente ("+u+") e stessa password");render()}));
+ $("vws").querySelectorAll("[data-vfe]").forEach(c=>c.onchange=()=>{const v=S.viewers.find(x=>x.id==c.dataset.vfe);if(c.checked)v.fe=true;else delete v.fe;save();toast(c.checked?v.name+" può modificare i festivi":"Permesso festivi tolto")});
+ $("vws").querySelectorAll("[data-vpian]").forEach(c=>c.onchange=()=>{const v=S.viewers.find(x=>x.id==c.dataset.vpian);v.pian=c.checked;if(v.pian&&!(v.pianR||[]).length)v.pianR=[(S.reparti[0]||{}).id];save();fillWho();toast(c.checked?v.name+" ora è pianificatore":"Funzione pianificatore tolta");render()});
     $("vws").querySelectorAll("[data-vrep]").forEach(c=>c.onchange=()=>{const v=S.viewers.find(x=>x.id==c.dataset.vrep),id=+c.value;let a=(pianOf(v)||[]).filter(x=>x!==id);if(c.checked)a.push(id);if(!a.length){c.checked=true;return toast("Lascia almeno un ente")}v.pianR=a;save();toast("Enti pianificati aggiornati")});
     $("vws").querySelectorAll("[data-vr]").forEach(b=>b.onclick=()=>confirm2(b,()=>{S.viewers=S.viewers.filter(v=>v.id!=b.dataset.vr);save();fillWho();toast("Utente tolto");render()}));
     $("vaddb").onclick=()=>{const v=$("vadd2").value.trim();if(!v)return toast("Scrivi il nome");S.viewers.push({id:Math.max(0,...S.viewers.map(x=>x.id))+1,name:v});save();fillWho();toast("Utente in sola lettura aggiunto");render()};
@@ -2182,7 +2199,7 @@ render=function(){render0();try{tfAfter()}catch(e){console.error(e)}};
 function tfAfter(){
  const ar=S.reparti.filter(isAutoRep).filter(repAccess);
  $("acms").hidden=false;
- if((tab==="imp"||tab==="turni")&&!canSet()){tab="persone";return render()}
+ if((tab==="imp"&&!canImp())||(tab==="turni"&&!canSet())){tab="persone";return render()}
  $("bdgt").hidden=$("bdgms").hidden||$("acms").hidden;$("bdgt").textContent=$("bdgms").textContent;
  tfConfDraw();
  if(tab==="persone"&&repF&&isAutoRep(S.reparti.find(r=>r.id===repF)))$("gtitle").textContent=TFD.pc?"Montastampi: i turni si gestiscono in Turni › Montastampi":"Disponibile solo dal PC (reparto Montastampi)";
