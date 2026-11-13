@@ -444,7 +444,7 @@ td.name.har{box-shadow:inset 4px 0 0 var(--ac),6px 0 8px -6px rgb(0 0 0/.15)!imp
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.8.1",APP_REV_DATE="13/11/2026";
+const APP_REV="15.8.2",APP_REV_DATE="13/11/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={AS:"Assenza giustificata",MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -1530,7 +1530,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
   }
 
   if(tab==="imp"||tab==="turni"){
-    document.querySelectorAll(".adm").forEach(e=>e.hidden=(!!me||!!ro)&&!(e.classList.contains("pfest")&&(planR()||feFlag())));if(festOnly())document.querySelectorAll("#v-imp > details:not(#fdfest)").forEach(e=>e.hidden=true);$("impnote").hidden=!(me||ro);$("impnote").textContent=(me||ro)?(festOnly()?"Puoi modificare solo i giorni festivi.":(planR()?"Pianificatore · ":"")+"Puoi modificare giro, turno default, regole e persone solo di: "+RP().map(r=>r.name).join(", ")+"."):"";
+    document.querySelectorAll(".adm").forEach(e=>e.hidden=(!!me||!!ro)&&!(e.classList.contains("pfest")&&feFlag()));if(festOnly())document.querySelectorAll("#v-imp > details:not(#fdfest)").forEach(e=>e.hidden=true);$("impnote").hidden=!(me||ro);$("impnote").textContent=(me||ro)?(festOnly()?"Puoi modificare solo i giorni festivi.":(planR()?"Pianificatore · ":"")+"Puoi modificare giro, turno default, regole e persone solo di: "+RP().map(r=>r.name).join(", ")+"."):"";
     if(!RP().some(r=>r.id===giroRep))giroRep=(RP()[0]||{}).id;
     const GR=S.reparti.find(r=>r.id===giroRep);
     $("grep").innerHTML=RP().map(r=>`<option value="${r.id}">${r.name}${S.drafts[r.id]&&JSON.stringify(S.drafts[r.id])!==JSON.stringify(r.versions)?" (modifiche in bozza)":""}</option>`).join("");$("grep").value=String(giroRep);
