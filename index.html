@@ -444,7 +444,7 @@ td.name.har{box-shadow:inset 4px 0 0 var(--ac),6px 0 8px -6px rgb(0 0 0/.15)!imp
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.9.0",APP_REV_DATE="18/11/2026";
+const APP_REV="15.9.1",APP_REV_DATE="18/11/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={AS:"Assenza giustificata",MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -518,16 +518,22 @@ function tfStatus(){const e=document.getElementById("dsub");if(e)e.textContent=t
 function mSaveCfg(){if(TFD.fb)TFD.fb.db.doc(MCFGD).set(MCFG).catch(e=>toast("Impostazione non salvata: "+(e.code||e.message)));save();toast("Salvato")}
 const save=()=>{clrPC();if(typeof fixCodes==="function")fixCodes(true);if(FBM&&LOGGED==="a"&&S.admOk&&!FBS&&fbPending())setTimeout(()=>fbSync(),1500);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(TFD.kind!=="local")tfQueue()};
 function tfQueue(){TFD.dirty=true;TFD.err="";tfStatus();if(!TFD.ready){TFD.pend=true;return}clearTimeout(TFD.timer);TFD.timer=setTimeout(tfFlush,500)}
-// Riepilogo turni per Ergo Plan (documento ergoplan/turni): turni già calcolati dei reparti di ingegneria e manutenzione,
-// da 7 giorni fa a 6 mesi avanti. Lo scrive solo l'admin (vede tutti i reparti). Solo scrittura, l'app non lo rilegge: se fallisce non tocca i dati dei turni.
-let EPS_T=null,EPS_L="";
-function epSnap(){clearTimeout(EPS_T);EPS_T=setTimeout(async()=>{try{if(!TFD.fb||!TFD.fb.db||!TFD.fb.auth.currentUser||!(TFD.who&&TFD.who.user==="admin"))return;
-  const reps=(S.reparti||[]).filter(r=>/ingegn|manutenz/i.test(r.name||""));if(!reps.length)return;
-  const ids=new Set(reps.map(r=>r.id)),da=add(todayIso,-7),N=190,days=[];for(let i=0;i<N;i++)days.push(add(da,i));{const ys=[...new Set(days.map(d=>+d.slice(0,4)))].filter(y=>isArc(y)||isOut(y));if(ys.length)await Promise.all(ys.map(ensureYear))}
-  const p={};(S.people||[]).filter(x=>ids.has(x.rep)).forEach(x=>{const s=[],t=[];days.forEach(d=>{let c={s:"",txt:""};try{c=cellOf(x,d)}catch(e){}s.push(c.s||"");t.push((c.txt==="·"?"":c.txt||"")+(c.r&&c.r.st==="wait"?"?":""))});
-   p["p"+x.id]={n:x.name,rep:repName(x.rep),s:s.join(","),t:t.join(",")}});
-  const doc={da,n:N,p},k=JSON.stringify(doc);if(k===EPS_L)return;
-  await TFD.fb.db.doc("ergoplan/turni").set(Object.assign({agg:new Date().toISOString(),rev:APP_REV},doc));EPS_L=k}catch(e){console.warn("Riepilogo Ergo Plan non salvato",e&&e.message)}},3000)}
+// Riepilogo turni per Ergo Plan: un documento per reparto (ergoplan/rep_<id>) con i turni già calcolati dei reparti
+// di ingegneria e manutenzione, da 7 giorni fa a 6 mesi avanti. Lo scrive, al salvataggio, l'admin o un responsabile
+// (livello 2+, solo i reparti che segue) o un direttore (livello 3+, i reparti che vede), solo per i reparti caricati.
+// Solo scrittura: l'app non lo rilegge, se fallisce non tocca i dati dei turni.
+let EPS_T=null;const EPS_L={};
+function epSnap(){clearTimeout(EPS_T);EPS_T=setTimeout(async()=>{try{if(!TFD.fb||!TFD.fb.db||!TFD.fb.auth.currentUser)return;
+  const adm=!!(TFD.who&&TFD.who.user==="admin"),x=!adm&&me?person(me):null;if(!adm&&(!x||lvl(x)<2))return;
+  const can=adm?null:new Set(lvl(x)>=3?[...seeOf(x),...segue(x)]:segue(x));
+  const reps=(S.reparti||[]).filter(r=>/ingegn|manutenz/i.test(r.name||"")&&(adm||can.has(r.id)&&(!TFD.reps||TFD.reps.includes(r.id))));if(!reps.length)return;
+  const da=add(todayIso,-7),N=190,days=[];for(let i=0;i<N;i++)days.push(add(da,i));
+  {const ys=[...new Set(days.map(d=>+d.slice(0,4)))].filter(y=>isArc(y)||isOut(y));if(ys.length)await Promise.all(ys.map(ensureYear))}
+  for(const r of reps){const p={};(S.people||[]).filter(q=>q.rep===r.id).forEach(q=>{const s=[],t=[];days.forEach(d=>{let c={s:"",txt:""};try{c=cellOf(q,d)}catch(e){}s.push(c.s||"");t.push((c.txt==="·"?"":c.txt||"")+(c.r&&c.r.st==="wait"?"?":""))});
+    p["p"+q.id]={n:q.name,rep:r.name,s:s.join(","),t:t.join(",")}});
+   const doc={da,n:N,rep:r.name,p},k=JSON.stringify(doc);if(EPS_L[r.id]===k)continue;
+   await TFD.fb.db.doc("ergoplan/rep_"+r.id).set(Object.assign({agg:new Date().toISOString(),rev:APP_REV,da_chi:adm?"admin":x.name},doc));EPS_L[r.id]=k}
+ }catch(e){console.warn("Riepilogo Ergo Plan non salvato",e&&e.message)}},3000)}
 async function tfFlush(){
  if(TFD.busy){TFD.again=true;return}
  TFD.busy=true;TFD.again=false;
