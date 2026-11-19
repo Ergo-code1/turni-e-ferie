@@ -444,7 +444,7 @@ td.name.har{box-shadow:inset 4px 0 0 var(--ac),6px 0 8px -6px rgb(0 0 0/.15)!imp
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.9.1",APP_REV_DATE="18/11/2026";
+const APP_REV="15.9.2",APP_REV_DATE="19/11/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={AS:"Assenza giustificata",MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -1115,15 +1115,24 @@ const ORA={M:[6,14],P:[14,22],N:[22,30],G:[8,17],SV:[8,17],MSV:[6,14],PSV:[14,22
 const tmin=v=>{const m=/^(\d{1,2}):(\d{2})$/.exec(v||"");return m?+m[1]*60+ +m[2]:null};
 const hh=x=>String(Math.floor(x/60)%24).padStart(2,"0")+":"+String(x%60).padStart(2,"0");
 const FAS=["F","L","CH"],ORA1=["EA","UA"];
+// Dalle/Alle solo per assenze a ore (non giornata intera) e per il cambio orario
+const fasOn=t=>FAS.includes(t)&&(t==="CH"||hrs!==8);
+const xHrs=()=>{const t=($("tipo")||{}).value||tipo;if($("fasl"))$("fasl").hidden=!fasOn(t);if($("ppl"))$("ppl").hidden=t==="CH"};
 // Campi in fondo al riquadro richiesta: fascia (Dalle/Alle), ora di ingresso/uscita, nota
-const xFields=t=>`<span id="fasl" class="row"${FAS.includes(t)?"":" hidden"} style="gap:8px"><label>Dalle<input type="time" id="t1"></label><label>Alle<input type="time" id="t2"></label></span>
+const xFields=t=>`<span id="fasl" class="row"${fasOn(t)?"":" hidden"} style="gap:8px"><label>Dalle<input type="time" id="t1"></label><label>Alle<input type="time" id="t2"></label><label class="chk" id="ppl"${t==="CH"?" hidden":""}><input type="checkbox" id="pp"> include pausa pranzo</label></span>
   <label id="ora1l"${ORA1.includes(t)?"":" hidden"}><span id="ora1t">${t==="UA"?"Ora di uscita":"Ora di ingresso"}</span><input type="time" id="ora1"></label>
   <label id="notel" style="flex:1;min-width:160px"><span id="notet">${t==="ST"?"Motivo":"Nota (facoltativa)"}</span><input id="note" maxlength="60" placeholder="${t==="ST"?"es. consegna urgente":t==="TR"?"es. trasferta a Schaeffler":""}"></label>`;
-const xTipo=t=>{if($("hrsl"))$("hrsl").hidden=FULL.includes(t)||ORA1.includes(t)||t==="CH";$("fasl").hidden=!FAS.includes(t);$("ora1l").hidden=!ORA1.includes(t);$("ora1t").textContent=t==="UA"?"Ora di uscita":"Ora di ingresso";$("notet").textContent=t==="ST"?"Motivo":"Nota (facoltativa)";$("note").placeholder=t==="ST"?"es. consegna urgente":t==="TR"?"es. trasferta a Schaeffler":""};
+const xTipo=t=>{if($("hrsl"))$("hrsl").hidden=FULL.includes(t)||ORA1.includes(t)||t==="CH";$("fasl").hidden=!fasOn(t);if($("ppl"))$("ppl").hidden=t==="CH";$("ora1l").hidden=!ORA1.includes(t);$("ora1t").textContent=t==="UA"?"Ora di uscita":"Ora di ingresso";$("notet").textContent=t==="ST"?"Motivo":"Nota (facoltativa)";$("note").placeholder=t==="ST"?"es. consegna urgente":t==="TR"?"es. trasferta a Schaeffler":""};
 // Legge i campi: {h, note} oppure {err}
 function xRead(t,p,day){const v=id=>($(id)||{}).value||"",n=v("note").trim().slice(0,60);let h=FULL.includes(t)?8:hrs,pre="";
-  if(FAS.includes(t)){const a=tmin(v("t1")),b=tmin(v("t2"));
-    if(a!=null||b!=null){if(a==null||b==null||b<=a)return{err:"Controlla l'orario: «Alle» deve essere dopo «Dalle»"};pre=(t==="CH"?"orario ":"dalle ")+hh(a)+(t==="CH"?"–":" alle ")+hh(b);if(t!=="CH"){h=Math.min(8,Math.max(.5,Math.round((b-a)/30)/2));if(h>7)h=8}}
+  if(fasOn(t)){const a=tmin(v("t1")),b=tmin(v("t2"));
+    if(a!=null||b!=null){if(a==null||b==null||b<=a)return{err:"Controlla l'orario: «Alle» deve essere dopo «Dalle»"};pre=(t==="CH"?"orario ":"dalle ")+hh(a)+(t==="CH"?"–":" alle ")+hh(b);
+      if(t!=="CH"&&h!==8){const span=b-a,want=Math.round(h*60),pp=!!($("pp")||{}).checked,diff=span-want,hs=x=>{const o=Math.floor(x/60),m=x%60;return(o?o+" h":"")+(o&&m?" ":"")+(m?m+" min":"")||"0 min"},hx=String(h).replace(".",",")+" h";
+        if(diff<0)return{err:"Orario incongruente: dalle "+hh(a)+" alle "+hh(b)+" sono "+hs(span)+", ma hai chiesto "+hx};
+        if(!pp&&diff>0)return{err:diff<=60?"Orario incongruente: dalle "+hh(a)+" alle "+hh(b)+" sono "+hs(span)+", ma hai chiesto "+hx+". Se in mezzo c'è la pausa pranzo spunta «include pausa pranzo»":"Orario incongruente: dalle "+hh(a)+" alle "+hh(b)+" sono "+hs(span)+", ma hai chiesto "+hx};
+        if(pp&&diff===0)return{err:"Hai spuntato la pausa pranzo, ma la fascia è esattamente di "+hx+": togli la spunta o correggi l'orario"};
+        if(pp&&diff>60)return{err:"Anomalia: la fascia supera "+hx+" di "+hs(diff)+", ma la pausa pranzo dura al massimo 1 ora"};
+        if(pp)pre+=" (pausa pranzo "+hs(diff)+")"}}
     else if(t==="CH")return{err:"Indica l'orario: dalle… alle…"}}
   if(t==="CH")h=0;
   if(ORA1.includes(t)){const a=tmin(v("ora1"));if(a==null)return{err:t==="UA"?"Indica l'ora di uscita":"Indica l'ora di ingresso"};
@@ -1211,7 +1220,7 @@ function reqSheet(){
   ${xFields(tipo)}
   <button class="pri" id="send" style="align-self:flex-end">Invia richiesta</button></div>`;
   s.hidden=false;
-  $("xs").onclick=()=>{sel=[];closeSheet();render()};$("hrs").onchange=e=>hrs=+e.target.value;$("tipo").onchange=e=>{tipo=e.target.value;xTipo(tipo)};
+  $("xs").onclick=()=>{sel=[];closeSheet();render()};$("hrs").onchange=e=>{hrs=+e.target.value;xHrs()};$("tipo").onchange=e=>{tipo=e.target.value;xTipo(tipo)};
   $("send").onclick=()=>{if(!okTipi(person(me),sel).some(t=>t.k===tipo))return toast("Voce non disponibile per i giorni scelti");sendReq()};
 }
 // Modifica di un giorno già richiesto (approvato o in attesa): la voce precedente si elimina e parte una nuova richiesta
@@ -1225,7 +1234,7 @@ function modSheet(r,day){
   ${xFields(tipo)}
   <button class="pri" id="send" style="align-self:flex-end">Invia modifica</button><button id="mdel" style="align-self:flex-end">Elimina questo giorno</button></div>`;
   s.hidden=false;$("xs").onclick=closeSheet;
-  $("hrs").onchange=e=>hrs=+e.target.value;$("tipo").onchange=e=>{tipo=e.target.value;xTipo(tipo)};
+  $("hrs").onchange=e=>{hrs=+e.target.value;xHrs()};$("tipo").onchange=e=>{tipo=e.target.value;xTipo(tipo)};
   const cut=()=>{r.days=r.days.filter(x=>x!==day);if(!r.days.length)S.reqs=S.reqs.filter(x=>x!==r)};
   $("mdel").onclick=()=>confirm2($("mdel"),()=>{cut();logIt(me,`${what.toLowerCase()} ${fmt(day)} eliminata dalla persona`);save();closeSheet();toast("Giorno eliminato");render()});
   $("send").onclick=()=>{if(!ok.some(t=>t.k===tipo))return toast("Nessuna voce disponibile per questo giorno");
