@@ -86,6 +86,7 @@ label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4
 @media (max-width:600px){.day{min-height:64px;padding:3px}.day .who{display:none}.day .more{display:block}}
 .day .more{display:none;color:var(--muted)}
 .wkrow{display:grid;grid-template-columns:28px 1fr 1fr 1fr auto;gap:8px;align-items:end;padding:8px 0;border-top:1px solid var(--line)}
+.CU{background:#6b4fa0;color:#fff}.wkd{grid-column:1/-1;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;padding:6px 0 2px}.wkd label{font-size:11px;display:flex;flex-direction:column;gap:3px}.wkd select,.wkd input{font-size:12px;padding:4px;min-width:0;width:100%}.wkb{display:flex;gap:6px;align-items:center}@media (max-width:640px){.wkd{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .wkrow:first-child{border-top:0}.wkrow.wk2{grid-template-columns:28px 1fr 1fr auto!important}.wkrow.wk2 .n{grid-row:auto!important}.wkrow .n{font-family:var(--mono);color:var(--muted);padding-bottom:8px}
 @media (max-width:520px){.wkrow{grid-template-columns:28px 1fr 1fr}.wkrow .n{grid-row:span 2}}
 .prow>.row{grid-column:1/-1}
@@ -446,11 +447,11 @@ td.name.har{box-shadow:inset 4px 0 0 var(--ac),6px 0 8px -6px rgb(0 0 0/.15)!imp
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.9.6",APP_REV_DATE="26/11/2026";
+const APP_REV="15.9.7",APP_REV_DATE="26/11/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
-const LAB={AS:"Assenza giustificata",MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
-const TXT={L:"104",AS:"X"};
+const LAB={CU:"Chiusure",AS:"Assenza giustificata",MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
+const TXT={CU:"CHI",L:"104",AS:"X"};
 let TIPI={CO:"Corso",TR:"Trasferta",F:"Ferie / permesso",L:"Permesso 104",EA:"Ingresso anticipato",UA:"Uscita anticipata",SW:"Smart working",DS:"Donazione sangue",ST:"Straordinario"};
 let FULL=["SW","DS","CO","TR"];
 const TIPI0=Object.assign({},TIPI,{BD:"Badge dimenticato",NR:"Non reperibilità"}),FULL0=[...FULL,"BD","NR"];
@@ -960,15 +961,15 @@ const monday=s=>{const x=D(s);return add(s,-((x.getDay()+6)%7))};
 function chgAt(p,day){const c=p.chg;if(!c||!c.length)return null;let r=null;for(const x of c)if(x.from<=day&&(!r||x.from>r.from))r=x;return r}
 function profAt(p,day){if(!day)return p.prof;const c=chgAt(p,day);return c&&c.prof?c.prof:p.prof}
 const wkIx=(v,day)=>Math.floor(Math.round((D(monday(day))-D(monday(v.a||v.from)))/864e5)/7);
-function offAt(p,v,day){let c=null;if(day)for(const x of p.chg||[])if(x.s!=null&&x.from<=day&&(!c||x.from>c.from))c=x;if(c&&c.s!=null&&!v.uni&&!v.auto&&(v.weeks||[]).length&&c.from>=v.from){const L=v.weeks.length;return(((c.s-wkIx(v,c.from))%L)+L)%L}return oo(v,p)}
+function offAt(p,v,day){let c=null;if(day)for(const x of p.chg||[])if(x.s!=null&&x.from<=day&&(!c||x.from>c.from))c=x;if(c&&c.s!=null&&!v.uni&&!v.auto&&(v.weeks||[]).length&&c.from>=v.from&&!(v.offx&&v.offx[p.id]&&c.from<=v.offx[p.id])){const L=v.weeks.length;return(((c.s-wkIx(v,c.from))%L)+L)%L}return oo(v,p)}
 // Settimana del giro (indice) che fa la persona nella settimana di "day"
 function giroIx(p,day){const v=verOf(versOf(p),day);if(!v||v.uni||v.auto||!(v.weeks||[]).length)return null;const L=v.weeks.length;return(((wkIx(v,day)+offAt(p,v,day))%L)+L)%L}
 function expW(p,w,dow,day){const pf=profAt(p,day),end=dow===6?(w.sab||"R"):dow===0?(w.dom||"R"):null;
-  if(pf==="giornata")return end?"R":"G";if(pf==="giornataSV")return end?"R":"SV";if(pf==="standard")return end||w.t;
+  if(pf==="giornata")return end?"R":"G";if(pf==="giornataSV")return end?"R":"SV";if(pf==="standard")return (w.d&&w.d[dow])||end||w.t;
   if(!end)return w.t==="N"?"N":w.t==="SV"?"SV":"G";return pf==="dnw"?end:"R"}
 // Settimana del giro da cui ripartire il "dal" f: riconosce dai turni reali (comprese le modifiche a mano)
 // delle 6 settimane prima quale settimana del giro stava facendo la persona, e riparte dalla successiva
-function contIdx(p,v,f){const W=v.weeks,L=W.length,m0=monday(f),T=["M","P","N","G","SV","R"];
+function contIdx(p,v,f){const W=v.weeks,L=W.length,m0=monday(f),T=["M","P","N","G","SV","R","CU"];
   const prev=verOf(versOf(p),add(m0,-1)),base=(()=>{if(!prev||prev.auto||prev.uni||!(prev.weeks||[]).length||prev.weeks.length!==L)return 0;
     const wk=Math.floor(Math.round((D(m0)-D(monday(prev.a||prev.from)))/864e5)/7);return((wk+oo(prev,p))%L+L)%L})();
   let best=base,bs=-1;
@@ -986,7 +987,7 @@ const myR=()=>planOnly()?planR():me?[...new Set([...segue(person(me)),...(planR(
 const RP=()=>S.reparti.filter(r=>myR().includes(r.id));
 const versOf=p=>!p.rep?S.versions:(S.reparti.find(r=>r.id===p.rep)||{}).versions||S.versions;
 const DOWN=["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"];
-const RULC={M:"Mattina",P:"Pomeriggio",MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",N:"Notte",G:"Giornata",SV:"Giornata SV",SW:"Smart working",R:"Riposo"};
+const RULC={CU:"Chiusure",M:"Mattina",P:"Pomeriggio",MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",N:"Notte",G:"Giornata",SV:"Giornata SV",SW:"Smart working",R:"Riposo"};
 function applyRules(p,day,s){const rs=p.rules;if(!rs||!rs.length)return s;const dow=D(day).getDay();
  for(const r of rs){if(r.dow!==dow||(r.from&&day<r.from)||(r.to&&day>r.to))continue;if(!r.always&&s==="R")continue;if(r.every>1){const k=Math.round((D(monday(day))-D(monday(r.from||"2026-01-05")))/6048e5);if(((k%r.every)+r.every)%r.every)continue}return r.code}return s}
 const P0C=new Map();const clrPC=()=>P0C.clear();
@@ -1001,6 +1002,7 @@ function plan0b(p,day){
   if(v.uni)return dow===6?(v.sab||"R"):dow===0?(v.dom||"R"):v.t;
   const wk=wkIx(v,day);
   const L=v.weeks.length,w=v.weeks[((wk+offAt(p,v,day))%L+L)%L];
+  if(pf==="standard"&&w.d&&w.d[dow])return w.d[dow];
   const end=dow===6?(w.sab||"R"):dow===0?(w.dom||"R"):null;
   if(pf==="giornata")return end?"R":"G";
   if(pf==="giornataSV")return end?"R":"SV";
@@ -1008,6 +1010,11 @@ function plan0b(p,day){
   if(!end)return w.t==="N"?"N":w.t==="SV"?"SV":"G";
   return pf==="dnw"?end:"R";
 }
+const CUS=()=>S.reparti.some(r=>r.chiu)?["CU"]:[];
+// Nota del giro (es. orario) per il giorno: solo se il turno viene dal giro, senza modifiche a mano
+function giroNote(p,day){if(!p||!p.rep||S.ov[p.id+"|"+day]||(p.in&&day<p.in)||S.fest.includes(day)||profAt(p,day)!=="standard")return "";
+ const v=verOf(versOf(p),day);if(!v||v.auto||v.uni||!(v.weeks||[]).length)return "";const L=v.weeks.length,w=v.weeks[((wkIx(v,day)+offAt(p,v,day))%L+L)%L];
+ return (w&&w.nt&&w.nt[D(day).getDay()])||""}
 const OFFC=["R","MA","L","F","DS","CM","AS"];
 // Riposo compensativo: sabato lavorato -> venerdì prima; domenica lavorata -> lunedì dopo
 function rcDay(p,day){
@@ -1119,7 +1126,7 @@ function runs(p,days){
   return out;
 }
 // Orari dei turni (per ingresso/uscita anticipati)
-const ORA={M:[6,14],P:[14,22],N:[22,30],G:[8,17],SV:[8,17],MSV:[6,14],PSV:[14,22]};
+const ORA={CU:[20,22],M:[6,14],P:[14,22],N:[22,30],G:[8,17],SV:[8,17],MSV:[6,14],PSV:[14,22]};
 const tmin=v=>{const m=/^(\d{1,2}):(\d{2})$/.exec(v||"");return m?+m[1]*60+ +m[2]:null};
 const hh=x=>String(Math.floor(x/60)%24).padStart(2,"0")+":"+String(x%60).padStart(2,"0");
 const FAS=["F","L","CH"],ORA1=["EA","UA"];
@@ -1195,7 +1202,7 @@ function closeSheet(){$("sheet").hidden=true}
 
 function editCell(p,day){
   const s=$("sheet"),o=S.ov[p.id+"|"+day],r=reqOf(p.id,day),we=isWe(day);
-  const codes=["M","P","MSV","PSV","N","G","SV","CO","TR","CM","BD","R","RC","F","MA","L","SW","DS"];
+  const codes=["M","P","MSV","PSV","N","G","SV",...CUS(),"CO","TR","CM","BD","R","RC","F","MA","L","SW","DS"];
   s.innerHTML=`<div class="row" style="justify-content:space-between"><strong>${p.name} · ${D(day).toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})}</strong><button id="xs">Chiudi</button></div>
   <span class="muted">Da giro turni: ${LAB[plan(p,day)]}${o?" · ora: "+LAB[o]:""}${r?` · richiesta ${r.tipo==="L"?"104":"ferie"} ${r.h}h (${r.st==="ok"?"approvata":"in attesa"})`:""}</span>
   <div class="row opts">${codes.map(k=>`<button class="${k}" data-k="${k}" title="${LAB[k]}">${TXT[k]||k}</button>`).join("")}${o?'<button data-k="">Ripristina giro</button>':""}</div>`;
@@ -1294,7 +1301,7 @@ function cellOf(p,day){
     if(r.st==="wait")cls+=" Q";
   }
   if(S.ov[p.id+"|"+day])cls+=" ov";
-  if(r&&r.note)cls+=" nt";
+  if((r&&r.note)||(!r&&giroNote(p,day)))cls+=" nt";
   return{cls,txt,s,r};
 }
 
@@ -1404,7 +1411,7 @@ function mSheet(){
   const busy=keys.filter(k=>{const[p,d]=k.split("|");return reqOf(+p,d)});
   s.innerHTML=`<div class="row" style="justify-content:space-between"><strong>Causale unica · ${keys.length} giorni · ${P.length} ${P.length===1?"persona":"persone"}</strong><button id="xs">Chiudi</button></div>
   <span class="muted">${P.map(p=>esc(p.name)+": "+runs(p,by[p.id]).map(x=>fmt(x[0])+(x.length>1?"–"+fmt(x[x.length-1]):"")).join(", ")).join(" · ")}</span>
-  <div class="row opts">${["M","P","MSV","PSV","N","G","SV","CO","TR","CM","BD","R","RC","F","MA","L","SW","DS"].map(k=>`<button class="${k}" data-mk="${k}" title="${LAB[k]}">${TXT[k]||k}</button>`).join("")}<button data-mk="">Ripristina giro</button></div>
+  <div class="row opts">${["M","P","MSV","PSV","N","G","SV",...CUS(),"CO","TR","CM","BD","R","RC","F","MA","L","SW","DS"].map(k=>`<button class="${k}" data-mk="${k}" title="${LAB[k]}">${TXT[k]||k}</button>`).join("")}<button data-mk="">Ripristina giro</button></div>
   <div style="border-top:1px solid var(--line);padding-top:8px"><strong>Oppure una causale (richiesta già approvata)</strong></div>
   ${busy.length?`<div class="warn">⚠ ${busy.length} ${busy.length===1?"giorno ha":"giorni hanno"} già una richiesta: ${busy.length===1?"verrà sostituito":"verranno sostituiti"} dalla nuova causale.</div>`:""}
   ${ok.length?"":`<div class="warn">Nessuna causale valida per tutti i giorni scelti (es. festivi e giorni di lavoro insieme): dividi la selezione.</div>`}
@@ -1432,7 +1439,7 @@ function mSheet(){
 $("mtog").onclick=()=>{MON=!MON;if(!MON)MSEL.clear();closeSheet();mBar();mPaint()};
 $("mclr").onclick=()=>{MSEL.clear();closeSheet();mBar();mPaint()};
 $("mgo").onclick=()=>{if(MSEL.size)mSheet()};
-let GPATCH=null,gRef=null,gChk=null; // gRef: data scelta per la vista del giro per persona
+let GPATCH=null,gRef=null,gChk=null;const GDO=new Set(); // gRef: data scelta per la vista del giro per persona
 // Mese sempre visibile nella colonna Persona: quello del primo giorno visibile a sinistra
 function gMon(){const g=$("grid"),el=$("gmon");if(!g||!el)return;const sc=g.parentElement,nm=g.querySelector("th.name"),x=sc.scrollLeft+(nm?nm.offsetWidth:0)+2;
  let d=null;for(const th of g.querySelectorAll("th[data-hd]")){d=th.dataset.hd;if(th.offsetLeft+th.offsetWidth>x)break}
@@ -1499,7 +1506,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
       }
       h+="</tr>";
     }
-    (rp.tot!==false?["M","P","G","SV","N"]:[]).forEach((k,i)=>{
+    (rp.tot!==false?["M","P","G","SV","N"].concat(rp.chiu?["CU"]:[]):[]).forEach((k,i)=>{
       h+=`<tr class="tot${i?"":" first"}" data-r="${rp.id}" data-k="${k}"><td class="name"><span class="nf">Totale ${LAB[k]}</span><span class="ns">Tot. ${k}</span></td>`;
       for(const day of days){const c=gtot(grpA,k,day);h+=`<td class="${c?k:""}${ms(day)}">${c||""}</td>`}
       h+="</tr>";
@@ -1509,8 +1516,8 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     $("grid").querySelectorAll("[data-gx]").forEach(bt=>bt.onclick=e=>{e.stopPropagation();const k=bt.dataset.gx,f=$("grid").querySelector("th[data-hd]"),d0=f&&f.dataset.hd;
      if(gMons().length>=GMAX)return;GX[k]++;render();
      if(k==="b"&&d0){const th=$("grid").querySelector(`th[data-hd="${d0}"]`),nm=$("grid").querySelector("th.name");if(th)sc.scrollLeft=Math.max(0,th.offsetLeft-(nm?nm.offsetWidth:0)-4)}})}
-    $("grid").onmouseover=ev=>{const td=ev.target.closest("td[data-d]");if(!td||td.title)return;const p=person(+td.dataset.p);if(p){const r=reqOf(p.id,td.dataset.d),w=r?(r.tipo==="F"?(r.h===8?"Ferie":"Permesso "+r.h+" h"):(TIPI[r.tipo]||r.tipo)):"";td.title=`${p.name} · ${fmt(td.dataset.d)} · ${LAB[shift(p,td.dataset.d)]||""}${w?" · "+w+(r.st==="wait"?" (in attesa)":""):""}${r&&r.note?"\n"+r.note:""}`}};
-    $("grid").onclick=ev=>{{const tn=ev.target.closest("td.nt");if(tn&&!tn.classList.contains("click")){const p=person(+tn.dataset.p),r=p&&reqOf(p.id,tn.dataset.d);if(r&&r.note)toast((TIPI[r.tipo]||"Nota")+": "+r.note);return}}const td=ev.target.closest("td.click");if(!td)return;
+    $("grid").onmouseover=ev=>{const td=ev.target.closest("td[data-d]");if(!td||td.title)return;const p=person(+td.dataset.p);if(p){const r=reqOf(p.id,td.dataset.d),w=r?(r.tipo==="F"?(r.h===8?"Ferie":"Permesso "+r.h+" h"):(TIPI[r.tipo]||r.tipo)):"";td.title=`${p.name} · ${fmt(td.dataset.d)} · ${LAB[shift(p,td.dataset.d)]||""}${w?" · "+w+(r.st==="wait"?" (in attesa)":""):""}${r&&r.note?"\n"+r.note:""}${!r&&giroNote(p,td.dataset.d)?"\nOrario: "+giroNote(p,td.dataset.d):""}`}};
+    $("grid").onclick=ev=>{{const tn=ev.target.closest("td.nt");if(tn&&!tn.classList.contains("click")){const p=person(+tn.dataset.p),r=p&&reqOf(p.id,tn.dataset.d);if(r&&r.note)toast((TIPI[r.tipo]||"Nota")+": "+r.note);else if(p&&giroNote(p,tn.dataset.d))toast("Orario: "+giroNote(p,tn.dataset.d));return}}const td=ev.target.closest("td.click");if(!td)return;
       const p=person(+td.dataset.p),day=td.dataset.d;
       if(MON&&p.id!==me){const k=p.id+"|"+day;if(MSEL.has(k))MSEL.delete(k);else MSEL.add(k);td.classList.toggle("msel",MSEL.has(k));mBar();if(!$("sheet").hidden&&$("mok"))mSheet();return}
       if(me&&p.id===me){const r0=reqOf(me,day);if(r0){sel=[];$("grid").querySelectorAll("td.sel").forEach(x=>x.classList.remove("sel"));return modSheet(r0,day)}sel=sel.includes(day)?sel.filter(x=>x!==day):[...sel,day];td.classList.toggle("sel",sel.includes(day));reqSheet()}else editCell(p,day);
@@ -1631,20 +1638,29 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     $("vers").querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{vi=+b.dataset.v;gRef=null;render()});
     $("vfrom").value=v.from;$("vfrom").onchange=e=>{if(!e.target.value)return;v.from=e.target.value;gRef=v.from;save();toast("Data modificata: premi Rendi operativo");render()};
     const edV=()=>{if(v.from>=todayIso)return v;if(v.to&&v.to<todayIso){toast("Versione già conclusa: crea una nuova versione");render();return null}
-      let n=DV.find(x=>x.from===todayIso);if(n)return n;n=JSON.parse(JSON.stringify(v));n.from=todayIso;n.a=v.a||v.from;v.to=add(todayIso,-1);DV.push(n);DV.sort((a,b)=>a.from<b.from?-1:1);vi=DV.indexOf(n);return n};
+      let n=DV.find(x=>x.from===todayIso);if(n)return n;n=JSON.parse(JSON.stringify(v));n.from=todayIso;n.a=v.a||v.from;if(!v.uni&&!v.auto&&(v.weeks||[]).length){n.off=n.off||{};for(const q of S.people.filter(q=>q.rep===giroRep))n.off[q.id]=offAt(q,v,todayIso)}v.to=add(todayIso,-1);DV.push(n);DV.sort((a,b)=>a.from<b.from?-1:1);vi=DV.indexOf(n);return n};
     $("vto").value=v.to||"";$("vto").onchange=e=>{const t=e.target.value;if(t&&t<v.from){toast("La fine non può essere prima dell'inizio");return render()}if(t)v.to=t;else delete v.to;save();toast(t?"Fine impostata: premi Rendi operativo":"Vale da qui in poi");render()};
     $("vtoclr").hidden=!v.to;$("vtoclr").onclick=()=>{delete v.to;save();toast("Vale da qui in poi: premi Rendi operativo");render()};
     $("vtype").value=v.auto?"auto":v.uni?"uni":"giro";$("vtype").onchange=e=>{const V=edV();if(!V)return;const tv=e.target.value;if(tv==="auto"){V.auto=true;V.local=true;delete V.uni}else{delete V.auto;delete V.local;if(!V.weeks||!V.weeks.length)V.weeks=[{t:"M",sab:"",dom:""}];if(tv==="uni"){V.uni=true;V.t=V.t||"G";if(V.sab==null)V.sab="";if(V.dom==null)V.dom=""}else delete V.uni}save();toast((V===v?"":"Modifica valida da oggi · ")+"premi Rendi operativo");render()};
     $("weeks").hidden=$("addwk").hidden=$("gpplw").hidden=!!(v.uni||v.auto);
     $("vdel").hidden=vs.length<2;$("vdel").onclick=()=>{DV.splice(vi,1);vi=0;save();toast("Versione eliminata");render()};
     const T={M:"Mattina",P:"Pomeriggio",G:"Giornata",SV:"Giornata SV",N:"Notte"},SA={"":"Nessuno",M:"Mattina",P:"Pomeriggio",G:"Giornata",SV:"Giornata SV"},DO={"":"Nessuno",M:"Mattina",P:"Pomeriggio",G:"Giornata",SV:"Giornata SV",N:"Notte"};
-    $("weeks").innerHTML=(v.weeks||[]).map((w,i)=>`<div class="wkrow"><span class="n">S${i+1}</span>
+    if(GR.chiu){T.CU=SA.CU=DO.CU="Chiusure"}
+    const DD=Object.assign({"":"Come settimana"},{M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",SV:"Giornata SV"},GR.chiu?{CU:"Chiusure"}:{},{R:"Riposo"}),GGN=["Dom","Lun","Mar","Mer","Gio","Ven","Sab"];
+    const gdOpen=(w,i)=>GDO.has(giroRep+"|"+i)||(w.d&&Object.keys(w.d).length)||(w.nt&&Object.keys(w.nt).length);
+    $("weeks").innerHTML=`<label style="display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:8px;padding:4px 0 10px;text-align:left"><input type="checkbox" id="gchiu" style="width:auto"${GR.chiu?" checked":""}><span>Turno <b>Chiusure</b> (20:00–22:00) disponibile in questo ente</span></label>`+(v.weeks||[]).map((w,i)=>`<div class="wkrow"><span class="n">S${i+1}</span>
       <label>Lun–Ven<select id="wt${i}" data-i="${i}" data-f="t">${opt(w.t,T)}</select></label>
       <label>Sabato<select id="ws${i}" data-i="${i}" data-f="sab">${opt(w.sab,SA)}</select></label>
       <label>Domenica<select id="wd${i}" data-i="${i}" data-f="dom">${opt(w.dom,DO)}</select></label>
-      ${(v.weeks||[]).length>1?`<button data-del="${i}" aria-label="Elimina settimana ${i+1}">✕</button>`:""}</div>`).join("");
+      <span class="wkb"><button data-gd="${i}" title="Turno e nota orario per ogni giorno">${gdOpen(w,i)?"Chiudi giorni":"Giorno per giorno"}</button>${(v.weeks||[]).length>1?`<button data-del="${i}" aria-label="Elimina settimana ${i+1}">✕</button>`:""}</span>
+      ${gdOpen(w,i)?`<div class="wkd">${[1,2,3,4,5,6,0].map(g=>`<label>${GGN[g]}<select data-dd="${i}|${g}">${opt((w.d||{})[g]||"",DD)}</select><input data-dn="${i}|${g}" value="${esc((w.nt||{})[g]||"")}" placeholder="Nota (orario)"></label>`).join("")}</div>`:""}</div>`).join("");
+    $("gchiu").onchange=e=>{if(e.target.checked)GR.chiu=true;else delete GR.chiu;save();toast(e.target.checked?"Turno Chiusure attivo per "+GR.name:"Turno Chiusure tolto per "+GR.name);render()};
+    $("weeks").querySelectorAll("[data-gd]").forEach(b=>b.onclick=()=>{const k=giroRep+"|"+b.dataset.gd,w=v.weeks[+b.dataset.gd];if(GDO.has(k)||(w.d&&Object.keys(w.d).length)||(w.nt&&Object.keys(w.nt).length)){if(w.d&&Object.keys(w.d).length||w.nt&&Object.keys(w.nt).length){GDO.delete(k);return toast("Per chiudere, riporta i giorni a \"Come settimana\" e togli le note")}GDO.delete(k)}else GDO.add(k);render()});
+    const gdSet=(el,f)=>{const [i,g]=el.dataset[f==="d"?"dd":"dn"].split("|"),V=edV();if(!V)return;const w=V.weeks[+i];w[f]=w[f]||{};const x=el.value.trim();if(x)w[f][g]=x;else delete w[f][g];if(!Object.keys(w[f]).length)delete w[f];GDO.add(giroRep+"|"+i);save();toast((V===v?"Modifica in bozza":"Modifica valida da oggi")+": premi Rendi operativo");render()};
+    $("weeks").querySelectorAll("[data-dd]").forEach(el=>el.onchange=()=>gdSet(el,"d"));
+    $("weeks").querySelectorAll("[data-dn]").forEach(el=>el.onchange=()=>gdSet(el,"nt"));
     $("weeks").querySelectorAll("select").forEach(s=>s.onchange=()=>{const V=edV();if(!V)return;const W1=V.weeks[s.dataset.i];if(s.dataset.we){W1.sab=s.value?"M":"";W1.dom=s.value?"G":""}else W1[s.dataset.f]=s.value;save();toast((V===v?"Modifica in bozza":"Modifica valida da oggi")+": premi Rendi operativo");render()});
-    const keep=(V,fn,delAt)=>{const W0=V.weeks.length,now=S.people.filter(p=>p.rep===giroRep).map(p=>[p,(((wk0+oo(V,p))%W0)+W0)%W0]);fn();const W=V.weeks.length;V.off=V.off||{};
+    const keep=(V,fn,delAt)=>{const W0=V.weeks.length,now=S.people.filter(p=>p.rep===giroRep).map(p=>[p,(((wk0+offAt(p,V,todayIso))%W0)+W0)%W0]);V.offx=V.offx||{};for(const [p] of now)V.offx[p.id]=todayIso;fn();const W=V.weeks.length;V.off=V.off||{};
       for(const [p,c0] of now){let c=delAt!=null&&c0>delAt?c0-1:c0;c=Math.min(c,W-1);V.off[p.id]=(((c-wk0)%W)+W)%W}};
     $("weeks").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const j=+b.dataset.del;const V=edV();if(!V)return;keep(V,()=>V.weeks.splice(j,1),j);save();toast("Settimana eliminata: premi Rendi operativo");render()});
     $("addwk").onclick=()=>{const V=edV();if(!V)return;keep(V,()=>V.weeks.push({t:"M",sab:"",dom:""}));save();toast("Settimana aggiunta: premi Rendi operativo");render()};
@@ -1658,7 +1674,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
      const ref=gRef||base,m0=monday(ref);const inV=ref>=v.from&&(!v.to||ref<=v.to),wkR=inV?Math.floor(Math.round((D(m0)-D(monday(v.a||v.from)))/864e5)/7):wk0,refLab=inV?"Sett. del "+(+m0.slice(8))+"/"+(+m0.slice(5,7)):"Questa sett.";
      const wkOf=(p,m)=>{const x=verOf(DV,m);if(!x||x.auto)return null;if(x.uni)return {i:-1,w:{t:x.t,sab:x.sab,dom:x.dom}};const L=x.weeks.length;if(!L)return null;const n=wkIx(x,m),i=((n+offAt(p,x,m))%L+L)%L;return {i,w:x.weeks[i]}};
      $("gpnote").textContent=`Settimane dal ${fmt(add(m0,-28))} al ${fmt(add(m0,34))}: evidenziata la settimana del ${fmt(m0)} (data di inizio scelta sopra). La tendina accanto al nome indica quale settimana del giro (S1, S2…) fa la persona ${inV?"nella settimana evidenziata":"questa settimana"}: se la cambi, tutto il suo giro si sposta di conseguenza e dalla settimana dopo prosegue con la successiva.`;
-     $("gppl").innerHTML=grp.length?grp.map(p=>{const cur=(((wkR+offOf(p))%W)+W)%W;let cells="";for(let k=-4;k<=4;k++){const m=add(m0,k*7),r=wkOf(p,m);if(!r){cells+=`<span class="gw" title="Settimana del ${fmt(m)}">–<b>·</b><i class="gwd">${+m.slice(8)}/${+m.slice(5,7)}</i></span>`;continue}
+     $("gppl").innerHTML=grp.length?grp.map(p=>{const cur=(((wkR+offAt(p,v,inV?add(m0,6):todayIso))%W)+W)%W;let cells="";for(let k=-4;k<=4;k++){const m=add(m0,k*7),r=wkOf(p,m);if(!r){cells+=`<span class="gw" title="Settimana del ${fmt(m)}">–<b>·</b><i class="gwd">${+m.slice(8)}/${+m.slice(5,7)}</i></span>`;continue}
         const we=r.w.sab||r.w.dom;cells+=`<span class="gw ${r.w.t}${k?"":" now"}${k<0?" past":""}" title="Settimana del ${fmt(m)}${we?" · weekend: sabato "+(LAB[r.w.sab]||"riposo")+", domenica "+(LAB[r.w.dom]||"riposo"):""}">${r.i<0?"⟳":"S"+(r.i+1)}<b>${r.w.t}</b><i>${we?"WE":"&nbsp;"}</i><i class="gwd">${+m.slice(8)}/${+m.slice(5,7)}</i></span>`}
        if(p.prof==="giornata"||p.prof==="giornataSV")return `<div class="gprow"><span class="gpn">${p.name}</span><span class="muted" style="grid-column:2/-1">Profilo ${PROF[p.prof]}: lavora lun–ven 8–17 e non segue il giro. Per farla ruotare cambia il profilo in "Turno standard" qui a fianco.</span></div>`;
        return `<div class="gprow"><span class="gpn">${p.name}</span><label class="gpo">${refLab}<select id="go${p.id}" data-go="${p.id}">${opt(String(cur),Object.fromEntries(v.weeks.map((_,i)=>[i,"S"+(i+1)])))}</select></label><div class="gws">${cells}</div></div>`}).join(""):'<p class="muted">Nessuna persona a turni in questo reparto.</p>';
@@ -1671,7 +1687,7 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
        <div class="scroll" style="margin-top:6px"><table class="gck"><tr><th class="name"></th>${days.map(d=>`<th>${"DLMMGVS"[D(d).getDay()]}<br>${+d.slice(8)}</th>`).join("")}</tr>${rows}</table></div>
        <p class="muted" style="margin-top:4px">Scegli una data qualsiasi: viene controllata la sua settimana. Turni effettivi (con modifiche a mano) confrontati con il giro in bozza. Ferie, assenze e riposi compensativi non contano; le caselle col bordo rosso indicano il turno previsto dal giro.</p>`;
       $("gckd").onchange=e=>{gChk=e.target.value||null;render()}}
-     $("gppl").querySelectorAll("[data-go]").forEach(sl=>sl.onchange=()=>{const V=edV();if(!V)return;V.off=V.off||{};V.off[+sl.dataset.go]=(((+sl.value-wkR)%W)+W)%W;save();toast("Modifica in bozza: premi Rendi operativo");render()});}
+     $("gppl").querySelectorAll("[data-go]").forEach(sl=>sl.onchange=()=>{const V=edV();if(!V)return;V.off=V.off||{};V.off[+sl.dataset.go]=(((+sl.value-wkR)%W)+W)%W;V.offx=V.offx||{};V.offx[+sl.dataset.go]=todayIso;save();toast("Modifica in bozza: premi Rendi operativo");render()});}
     const maxW=Math.max(...S.reparti.flatMap(r=>r.versions.map(x=>(x.weeks||[]).length)),...DV.map(x=>(x.weeks||[]).length));
     const pq=(window._pq||"").toLowerCase(),pr=window._pr||0;
     $("pfrep").innerHTML=`<option value="0">Tutti gli enti</option>${RP().map(r=>`<option value="${r.id}">${r.name}</option>`).join("")}${me?"":'<option value="-1">Senza reparto</option>'}`;$("pfrep").value=String(pr);
@@ -1844,7 +1860,7 @@ const rsVal=(s,k,mk)=>{const m=s&&s.months&&s.months[mk];if(m&&m[k]!=null)return
 function tfConf(rep,y,m){
  const s=rsOf(rep.id);if(!s||!(s.enabled||[]).length)return[];
  const en=new Set(s.enabled),out=[],P=S.people.filter(p=>p.rep===rep.id&&inGrid(p));if(!P.length)return out;
- const n=new Date(y,m+1,0).getDate(),mk=y+"-"+String(m+1).padStart(2,"0"),val=k=>rsVal(s,k,mk),WORK=["M","P","N","G","SV","MSV","PSV"];
+ const n=new Date(y,m+1,0).getDate(),mk=y+"-"+String(m+1).padStart(2,"0"),val=k=>rsVal(s,k,mk),WORK=["M","P","N","G","SV","MSV","PSV","CU"];
  const first=iso(y,m,1),last=iso(y,m,n),days=[];for(let d=1;d<=n;d++)days.push(iso(y,m,d));
  for(const day of days){const pre=isWe(day)?"Weekend":"Weekday";
   for(const k of ["M","P","N"]){const c=P.filter(p=>shift(p,day)===k&&!absent(p,day)).length,mn="cov"+pre+k,mx="max"+pre+k;
