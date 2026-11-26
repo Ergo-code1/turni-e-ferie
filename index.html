@@ -447,7 +447,7 @@ td.name.har{box-shadow:inset 4px 0 0 var(--ac),6px 0 8px -6px rgb(0 0 0/.15)!imp
 // null = Firebase non usato: l'app ripiega su Python+SQLite (/api/tf/state) e poi su localStorage. Vedi firebase/README.md.
 const FIREBASE_CONFIG={apiKey:"AIzaSyCcTE9ycU-ZP0E6UOcdiP9m0tzWIbVs6Rk",authDomain:"gestione-turni-e-ferie.firebaseapp.com",projectId:"gestione-turni-e-ferie",storageBucket:"gestione-turni-e-ferie.firebasestorage.app",messagingSenderId:"1077126115569",appId:"1:1077126115569:web:bdede1df6039a85319b950"};
 // Versione dell'app (es. 15.0.1): aggiornare APP_REV qui e "ver" in version.json con lo stesso valore
-const APP_REV="15.9.7",APP_REV_DATE="26/11/2026";
+const APP_REV="15.9.8",APP_REV_DATE="26/11/2026";
 const vcmp=(a,b)=>{const x=String(a).split(".").map(Number),y=String(b).split(".").map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d}return 0};
 const PROF0={none:"Nessun piano turni"};const PROF={giornata:"Giornata",giornataSV:"Giornata stabilimento SV",standard:"Turno standard",dn:"Diurni a giornata + notti",dnw:"Diurni a giornata + notti + weekend"};
 const LAB={CU:"Chiusure",AS:"Assenza giustificata",MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",BD:"Badge dimenticato",CM:"Congedo matrimoniale",SV:"Giornata stabilimento SV",CO:"Corso",TR:"Trasferta",M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",R:"Riposo",RC:"Riposo compensativo",MA:"Mutua",L:"104",F:"Ferie",SW:"Smart working",DS:"Donazione sangue"};
@@ -988,8 +988,9 @@ const RP=()=>S.reparti.filter(r=>myR().includes(r.id));
 const versOf=p=>!p.rep?S.versions:(S.reparti.find(r=>r.id===p.rep)||{}).versions||S.versions;
 const DOWN=["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"];
 const RULC={CU:"Chiusure",M:"Mattina",P:"Pomeriggio",MSV:"Mattina a Settimo Vittone",PSV:"Pomeriggio a Settimo Vittone",N:"Notte",G:"Giornata",SV:"Giornata SV",SW:"Smart working",R:"Riposo"};
-function applyRules(p,day,s){const rs=p.rules;if(!rs||!rs.length)return s;const dow=D(day).getDay();
- for(const r of rs){if(r.dow!==dow||(r.from&&day<r.from)||(r.to&&day>r.to))continue;if(!r.always&&s==="R")continue;if(r.every>1){const k=Math.round((D(monday(day))-D(monday(r.from||"2026-01-05")))/6048e5);if(((k%r.every)+r.every)%r.every)continue}return r.code}return s}
+function ruleHit(p,day,s){const rs=p.rules;if(!rs||!rs.length)return null;const dow=D(day).getDay();
+ for(const r of rs){if(r.dow!==dow||(r.from&&day<r.from)||(r.to&&day>r.to))continue;if(!r.always&&s==="R")continue;if(r.every>1){const k=Math.round((D(monday(day))-D(monday(r.from||"2026-01-05")))/6048e5);if(((k%r.every)+r.every)%r.every)continue}return r}return null}
+function applyRules(p,day,s){const r=ruleHit(p,day,s);return r?r.code:s}
 const P0C=new Map();const clrPC=()=>P0C.clear();
 function plan0(p,day){const ck=p.id+"|"+day;let v=P0C.get(ck);if(v===undefined){v=plan0x(p,day);P0C.set(ck,v)}return v}
 function plan0x(p,day){const s0=plan0b(p,day);return (profAt(p,day)==="none"||!p.rep||(p.in&&day<p.in)||S.fest.includes(day))?s0:applyRules(p,day,s0)}
@@ -1013,12 +1014,12 @@ function plan0b(p,day){
 const CUS=()=>S.reparti.some(r=>r.chiu)?["CU"]:[];
 // Nota del giro (es. orario) per il giorno: solo se il turno viene dal giro, senza modifiche a mano
 function giroNote(p,day){if(!p||!p.rep||S.ov[p.id+"|"+day]||(p.in&&day<p.in)||S.fest.includes(day)||profAt(p,day)!=="standard")return "";
- const v=verOf(versOf(p),day);if(!v||v.auto||v.uni||!(v.weeks||[]).length)return "";const L=v.weeks.length,w=v.weeks[((wkIx(v,day)+offAt(p,v,day))%L+L)%L];
+ const rh=ruleHit(p,day,plan0b(p,day));if(rh)return rh.nt||"";const v=verOf(versOf(p),day);if(!v||v.auto||v.uni||!(v.weeks||[]).length)return "";const L=v.weeks.length,w=v.weeks[((wkIx(v,day)+offAt(p,v,day))%L+L)%L];
  return (w&&w.nt&&w.nt[D(day).getDay()])||""}
 const OFFC=["R","MA","L","F","DS","CM","AS"];
 // Riposo compensativo: sabato lavorato -> venerdì prima; domenica lavorata -> lunedì dopo
 function rcDay(p,day){
-  const dow=D(day).getDay();if(dow!==5&&dow!==1)return false;
+  const dow=D(day).getDay();if(dow!==5&&dow!==1)return false;{const vv=p.rep&&verOf(versOf(p),day);if(vv&&vv.norc)return false}
   if(OFFC.includes(plan0(p,day)))return false;
   const we=add(day,dow===5?1:-1),o=S.ov[p.id+"|"+we],ws=o==="RC"?"R":o||plan0(p,we);
   return !OFFC.includes(ws)&&ws!=="RC";
@@ -1648,12 +1649,13 @@ function render(){clrPC();if(LOGGED==="a"&&TFD.ready&&(TFD.kind!=="firebase"||TF
     if(GR.chiu){T.CU=SA.CU=DO.CU="Chiusure"}
     const DD=Object.assign({"":"Come settimana"},{M:"Mattina",P:"Pomeriggio",N:"Notte",G:"Giornata",SV:"Giornata SV"},GR.chiu?{CU:"Chiusure"}:{},{R:"Riposo"}),GGN=["Dom","Lun","Mar","Mer","Gio","Ven","Sab"];
     const gdOpen=(w,i)=>GDO.has(giroRep+"|"+i)||(w.d&&Object.keys(w.d).length)||(w.nt&&Object.keys(w.nt).length);
-    $("weeks").innerHTML=`<label style="display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:8px;padding:4px 0 10px;text-align:left"><input type="checkbox" id="gchiu" style="width:auto"${GR.chiu?" checked":""}><span>Turno <b>Chiusure</b> (20:00–22:00) disponibile in questo ente</span></label>`+(v.weeks||[]).map((w,i)=>`<div class="wkrow"><span class="n">S${i+1}</span>
+    $("weeks").innerHTML=`<label style="display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:8px;padding:4px 0 10px;text-align:left"><input type="checkbox" id="gchiu" style="width:auto"${GR.chiu?" checked":""}><span>Turno <b>Chiusure</b> (20:00–22:00) disponibile in questo ente</span></label><label style="display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:8px;padding:0 0 10px;text-align:left"><input type="checkbox" id="gnorc" style="width:auto"${v.norc?"":" checked"}><span>Riposo compensativo automatico dopo il weekend lavorato (vale per questa versione del giro)</span></label>`+(v.weeks||[]).map((w,i)=>`<div class="wkrow"><span class="n">S${i+1}</span>
       <label>Lun–Ven<select id="wt${i}" data-i="${i}" data-f="t">${opt(w.t,T)}</select></label>
       <label>Sabato<select id="ws${i}" data-i="${i}" data-f="sab">${opt(w.sab,SA)}</select></label>
       <label>Domenica<select id="wd${i}" data-i="${i}" data-f="dom">${opt(w.dom,DO)}</select></label>
       <span class="wkb"><button data-gd="${i}" title="Turno e nota orario per ogni giorno">${gdOpen(w,i)?"Chiudi giorni":"Giorno per giorno"}</button>${(v.weeks||[]).length>1?`<button data-del="${i}" aria-label="Elimina settimana ${i+1}">✕</button>`:""}</span>
       ${gdOpen(w,i)?`<div class="wkd">${[1,2,3,4,5,6,0].map(g=>`<label>${GGN[g]}<select data-dd="${i}|${g}">${opt((w.d||{})[g]||"",DD)}</select><input data-dn="${i}|${g}" value="${esc((w.nt||{})[g]||"")}" placeholder="Nota (orario)"></label>`).join("")}</div>`:""}</div>`).join("");
+    $("gnorc").onchange=e=>{const V=edV();if(!V)return;if(e.target.checked)delete V.norc;else V.norc=true;save();toast((e.target.checked?"Riposo compensativo automatico attivo":"Riposo compensativo automatico tolto")+": premi Rendi operativo");render()};
     $("gchiu").onchange=e=>{if(e.target.checked)GR.chiu=true;else delete GR.chiu;save();toast(e.target.checked?"Turno Chiusure attivo per "+GR.name:"Turno Chiusure tolto per "+GR.name);render()};
     $("weeks").querySelectorAll("[data-gd]").forEach(b=>b.onclick=()=>{const k=giroRep+"|"+b.dataset.gd,w=v.weeks[+b.dataset.gd];if(GDO.has(k)||(w.d&&Object.keys(w.d).length)||(w.nt&&Object.keys(w.nt).length)){if(w.d&&Object.keys(w.d).length||w.nt&&Object.keys(w.nt).length){GDO.delete(k);return toast("Per chiudere, riporta i giorni a \"Come settimana\" e togli le note")}GDO.delete(k)}else GDO.add(k);render()});
     const gdSet=(el,f)=>{const [i,g]=el.dataset[f==="d"?"dd":"dn"].split("|"),V=edV();if(!V)return;const w=V.weeks[+i];w[f]=w[f]||{};const x=el.value.trim();if(x)w[f][g]=x;else delete w[f][g];if(!Object.keys(w[f]).length)delete w[f];GDO.add(giroRep+"|"+i);save();toast((V===v?"Modifica in bozza":"Modifica valida da oggi")+": premi Rendi operativo");render()};
